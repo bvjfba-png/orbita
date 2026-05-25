@@ -33,24 +33,26 @@ body{
 }
 
 /* ---------- космос ---------- */
-#space{position:fixed;inset:0;overflow:hidden;touch-action:none}
+#space{position:fixed;inset:0;overflow:hidden;touch-action:none;cursor:grab}
+#space.panning{cursor:grabbing}
+#world{position:absolute;left:0;top:0;width:100%;height:100%}
 #stars{position:absolute;inset:0;pointer-events:none}
 .star{position:absolute;border-radius:50%;background:#fff;opacity:.5;
   animation:twinkle var(--tw,5s) ease-in-out infinite alternate}
 @keyframes twinkle{from{opacity:.12}to{opacity:.6}}
 
-.ring{position:absolute;left:50%;top:50%;border-radius:50%;
-  border:1px solid var(--ring);transform:translate(-50%,-50%);pointer-events:none}
+.ring{position:absolute;left:50%;top:50%;border-radius:50%;border-style:solid;
+  transform:translate(-50%,-50%);pointer-events:none}
+.ring-label{position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:var(--muted);white-space:nowrap;pointer-events:none;letter-spacing:.02em}
 
-#sun{position:absolute;left:50%;top:50%;width:60px;height:60px;border-radius:50%;
+#sun{position:absolute;left:0;top:0;width:60px;height:60px;border-radius:50%;
   transform:translate(-50%,-50%);cursor:pointer;z-index:5;
   background:radial-gradient(circle at 38% 34%, #fff7e6 0%, var(--sun-core) 34%, var(--sun-glow) 80%, #d9622a 100%);
-  box-shadow:0 0 12px 3px rgba(255,180,90,.5),0 0 50px 14px rgba(255,140,60,.3),0 0 100px 40px rgba(255,120,40,.14);
-  display:flex;align-items:center;justify-content:center;animation:pulse 7s ease-in-out infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 12px 3px rgba(255,180,90,.5),0 0 50px 14px rgba(255,140,60,.3),0 0 100px 40px rgba(255,120,40,.14)}
-  50%{box-shadow:0 0 16px 5px rgba(255,190,110,.6),0 0 64px 20px rgba(255,150,70,.36),0 0 124px 52px rgba(255,120,40,.18)}}
-#sunLabel{font-family:"Cormorant Garamond",serif;font-size:23px;font-weight:600;color:#3a1d05;
-  font-style:italic;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.3)}
+  box-shadow:0 0 6px 1.5px rgba(255,180,90,.25),0 0 25px 7px rgba(255,140,60,.15),0 0 50px 20px rgba(255,120,40,.07);
+  pointer-events:auto;animation:pulse 7s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 6px 1.5px rgba(255,180,90,.25),0 0 25px 7px rgba(255,140,60,.15),0 0 50px 20px rgba(255,120,40,.07)}
+  50%{box-shadow:0 0 8px 2.5px rgba(255,190,110,.3),0 0 32px 10px rgba(255,150,70,.18),0 0 62px 26px rgba(255,120,40,.09)}}
 
 .orb{position:absolute;left:0;top:0;border-radius:50%;cursor:grab;z-index:4;will-change:transform;
   transition:box-shadow .2s ease, filter .25s ease}
@@ -150,6 +152,25 @@ body{
   text-decoration:underline;text-underline-offset:3px;padding:4px}
 .linkbtn:hover{color:var(--text)}
 
+
+.field input[type=number]{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:11px;padding:11px 13px;color:var(--text);font-family:inherit;font-size:14.5px;outline:none}
+.orbit-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:200px;overflow-y:auto}
+.orbit-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:11px;background:rgba(255,255,255,.04);
+  border:1px solid var(--border);cursor:pointer}
+.orbit-item:hover{background:rgba(255,255,255,.07)}
+.orbit-preview{width:28px;height:28px;border-radius:50%;flex:0 0 auto;border:2px solid}
+.orbit-meta{flex:1;min-width:0}
+.orbit-meta .nm{font-size:13.5px}
+.orbit-meta .sub{font-size:11px;color:var(--muted)}
+.btn-secondary{width:100%;border:1px solid var(--border);border-radius:12px;padding:10px;font-family:inherit;
+  font-size:13.5px;cursor:pointer;background:rgba(255,255,255,.05);color:var(--text);margin-bottom:10px}
+.btn-secondary:hover{background:rgba(255,255,255,.1)}
+.modal.modal-sm{max-width:340px}
+.range-row{display:flex;align-items:center;gap:10px}
+.range-row input[type=range]{flex:1}
+.range-val{font-size:12px;color:var(--muted);min-width:36px;text-align:right}
+
 @media(max-width:640px){
   #panel{width:100%;max-width:330px}
   .brand{top:18px;left:18px}
@@ -161,7 +182,9 @@ body{
 <body>
 
 <div id="space">
-  <div id="stars"></div>
+  <div id="world">
+    <div id="stars"></div>
+  </div>
 </div>
 
 <div class="brand">
@@ -243,8 +266,9 @@ body{
     <h2>Настройки</h2>
     <div style="height:16px"></div>
     <div class="field">
-      <label>Подпись в центре (это ты)</label>
-      <input id="sLabel" type="text" maxlength="3" placeholder="Я">
+      <label>Орбиты</label>
+      <div class="orbit-list" id="orbitList"></div>
+      <button type="button" class="btn-secondary" id="addOrbitBtn">+ Добавить орбиту</button>
     </div>
     <div class="modal-actions">
       <button type="button" class="primary" id="settingsSave">Сохранить</button>
@@ -252,6 +276,40 @@ body{
     </div>
     <div style="text-align:center;margin-top:14px">
       <button type="button" class="linkbtn" id="resetBtn" style="color:#ff9a9a">Сбросить все данные</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="overlay" id="orbitOverlay">
+  <div class="modal modal-sm">
+    <h2 id="orbitFormTitle">Орбита</h2>
+    <div style="height:12px"></div>
+    <div class="field">
+      <label>Название</label>
+      <input id="oName" type="text" placeholder="Например: Близкий круг">
+    </div>
+    <div class="field">
+      <label>Расстояние от центра</label>
+      <div class="range-row">
+        <input id="oDist" type="range" min="5" max="100" value="50">
+        <span class="range-val" id="oDistVal">50%</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Толщина линии (px)</label>
+      <input id="oWidth" type="number" min="1" max="12" value="1">
+    </div>
+    <div class="field">
+      <label>Цвет линии</label>
+      <input id="oColor" type="color" value="#ffffff">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="primary" id="orbitSave">Сохранить</button>
+      <button type="button" id="orbitCancel">Отмена</button>
+    </div>
+    <div style="text-align:center;margin-top:8px">
+      <button type="button" class="linkbtn danger-link" id="orbitDelete" style="color:#ff9a9a;display:none">Удалить орбиту</button>
     </div>
   </div>
 </div>
@@ -284,16 +342,33 @@ function saveData(d){
 
 /* ============================================================
    ДАННЫЕ
-   data = { sunLabel, groups: {имя:1}, people: Person[] }
+   data = { groups: {имя:1}, people: Person[], orbits: Orbit[] }
    Person = { id, name, group, note, angle, dist, color: null|"#hex" }
+   Orbit = { id, name, dist (0..1), width (px), color }
    color = null → по близости; "#hex" → фиксированный
    ============================================================ */
-let data = { sunLabel:"Я", groups:{}, people:[] };
+let data = { groups:{}, people:[], orbits:[] };
+
+function defaultOrbits(){
+  return [
+    { id:uid(), name:"Близко", dist:0.28, width:1, color:"rgba(255,255,255,0.07)" },
+    { id:uid(), name:"Средняя дистанция", dist:0.55, width:1, color:"rgba(255,255,255,0.05)" },
+    { id:uid(), name:"Далеко", dist:0.88, width:1, color:"rgba(255,255,255,0.04)" }
+  ];
+}
+
+function migrateData(d){
+  if(!d.groups) d.groups = {};
+  if(!d.people) d.people = [];
+  if(!d.orbits || !d.orbits.length) d.orbits = defaultOrbits();
+  delete d.sunLabel;
+  return d;
+}
 
 function seed(){
   return {
-    sunLabel:"Я",
     groups:{ "Близкий круг":1, "Друзья":1, "Тёплые знакомые":1, "Другой вайб":1 },
+    orbits: defaultOrbits(),
     people:[
       mk("Аня","Близкий круг","Знаю со школы. Можно звонить в любое время.",0.16,-1.1),
       mk("Макс","Близкий круг","Понимает без слов.",0.22,2.4),
@@ -350,20 +425,39 @@ function hexA(hex, a){
    ГЕОМЕТРИЯ — центр, радиусы, звёзды, кольца, солнце
    ============================================================ */
 const space = document.getElementById("space");
+const world = document.getElementById("world");
 const stars = document.getElementById("stars");
-let cx = 0, cy = 0, maxR = 0;
+let cx = 0, cy = 0, baseR = 0, maxR = 0;
+let panX = 0, panY = 0;
 const SUN_R = 30;
 const MIN_GAP = 24;
-let rings = [];
+const SPACE_SCALE = 3;
+let ringEls = new Map();
 
 function layout(){
   cx = space.clientWidth / 2;
   cy = space.clientHeight / 2;
-  maxR = Math.min(cx, cy) - 60;
-  rings.forEach((r, i) => {
-    const rad = (SUN_R + MIN_GAP) + (maxR - (SUN_R + MIN_GAP)) * ((i + 1) / rings.length);
-    r.style.width = r.style.height = (rad * 2) + "px";
-  });
+  baseR = Math.min(cx, cy) - 60;
+  maxR = baseR * SPACE_SCALE;
+  applyPan();
+  syncRings();
+}
+
+function applyPan(){
+  world.style.transform = `translate(${panX}px, ${panY}px)`;
+}
+
+function worldPos(angle, dist){
+  const r = radiusOf(dist);
+  return { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r };
+}
+
+function pointerToPolar(clientX, clientY){
+  const dx = clientX - cx - panX;
+  const dy = clientY - cy - panY;
+  const ang = Math.atan2(dy, dx);
+  let r = Math.max(SUN_R + MIN_GAP, Math.min(maxR, Math.hypot(dx, dy)));
+  return { ang, r, dist: distOf(r) };
 }
 
 function radiusOf(dist){
@@ -377,7 +471,12 @@ function distOf(rpx){
 }
 
 function makeStars(){
-  const n = Math.min(90, Math.floor(window.innerWidth * window.innerHeight / 16000));
+  const span = SPACE_SCALE;
+  stars.style.width = (span * 100) + "%";
+  stars.style.height = (span * 100) + "%";
+  stars.style.left = "-" + ((span - 1) * 50) + "%";
+  stars.style.top = "-" + ((span - 1) * 50) + "%";
+  const n = Math.min(220, Math.floor(window.innerWidth * window.innerHeight / 8000) * span);
   let h = "";
   for(let i = 0; i < n; i++){
     const x = Math.random() * 100;
@@ -390,18 +489,69 @@ function makeStars(){
 }
 
 function buildScene(){
-  for(let i = 0; i < 3; i++){
-    const r = document.createElement("div");
-    r.className = "ring";
-    space.appendChild(r);
-    rings.push(r);
-  }
   const sun = document.createElement("div");
   sun.id = "sun";
-  sun.innerHTML = `<span id="sunLabel"></span>`;
   sun.addEventListener("click", openSettings);
-  space.appendChild(sun);
+  world.appendChild(sun);
+  setupPan();
   layout();
+}
+
+function syncRings(){
+  const ids = new Set(data.orbits.map(o => o.id));
+  for(const [id, el] of ringEls){
+    if(!ids.has(id)){ el.remove(); ringEls.delete(id); }
+  }
+  const sorted = [...data.orbits].sort((a, b) => a.dist - b.dist);
+  sorted.forEach(o => {
+    let el = ringEls.get(o.id);
+    if(!el){
+      el = document.createElement("div");
+      el.className = "ring";
+      el.innerHTML = `<span class="ring-label"></span>`;
+      world.appendChild(el);
+      ringEls.set(o.id, el);
+    }
+    const rad = radiusOf(o.dist) * 2;
+    el.style.width = el.style.height = rad + "px";
+    el.style.borderWidth = (o.width || 1) + "px";
+    el.style.borderColor = o.color || "rgba(255,255,255,0.06)";
+    el.querySelector(".ring-label").textContent = o.name || "";
+    el.style.left = cx + "px";
+    el.style.top = cy + "px";
+  });
+  const sun = document.getElementById("sun");
+  if(sun){
+    sun.style.left = cx + "px";
+    sun.style.top = cy + "px";
+  }
+}
+
+function setupPan(){
+  let sx, sy, active = false;
+  space.addEventListener("pointerdown", e => {
+    if(e.target.closest(".orb") || e.target.closest("#sun")) return;
+    active = true;
+    sx = e.clientX - panX;
+    sy = e.clientY - panY;
+    space.setPointerCapture(e.pointerId);
+    space.classList.add("panning");
+  });
+  space.addEventListener("pointermove", e => {
+    if(!active) return;
+    panX = e.clientX - sx;
+    panY = e.clientY - sy;
+    applyPan();
+    syncRings();
+  });
+  const endPan = e => {
+    if(!active) return;
+    active = false;
+    space.classList.remove("panning");
+    try{ space.releasePointerCapture(e.pointerId); }catch(_){}
+  };
+  space.addEventListener("pointerup", endPan);
+  space.addEventListener("pointercancel", endPan);
 }
 
 /* ============================================================
@@ -412,12 +562,12 @@ let draggingId = null;
 
 function applyVisual(el, p, dist){
   const size = 13 + (1 - dist) * 22;
-  const glow = 0.25 + (1 - dist) * 0.7;
+  const glow = 0.125 + (1 - dist) * 0.35;
   el.style.width = el.style.height = size + "px";
   const c = coreColor(p, dist);
   el.querySelector(".core").style.background =
     `radial-gradient(circle at 36% 32%, #fff 0%, ${c} 62%, ${c} 100%)`;
-  el.style.boxShadow = `0 0 ${8 + (1 - dist) * 16}px ${1 + (1 - dist) * 3}px ${glowColor(p, dist, glow)}`;
+  el.style.boxShadow = `0 0 ${4 + (1 - dist) * 8}px ${0.5 + (1 - dist) * 1.5}px ${glowColor(p, dist, glow)}`;
 }
 
 function syncOrbs(){
@@ -442,7 +592,7 @@ function syncOrbs(){
         py: Math.random() * Math.PI * 2
       };
       attachDrag(el, p.id);
-      space.appendChild(el);
+      world.appendChild(el);
       orbEls.set(p.id, el);
     }
     applyVisual(el, p, p.dist);
@@ -458,9 +608,9 @@ function loop(now){
     const el = orbEls.get(p.id);
     if(!el || p.id === draggingId) return;
     const d = el._drift;
-    const r = radiusOf(p.dist);
-    const bx = cx + Math.cos(p.angle) * r;
-    const by = cy + Math.sin(p.angle) * r;
+    const pos = worldPos(p.angle, p.dist);
+    const bx = pos.x;
+    const by = pos.y;
     const dx = Math.sin(t * d.sx + d.px) * d.ax;
     const dy = Math.cos(t * d.sy + d.py) * d.ay;
     el.style.transform = `translate(${bx + dx}px, ${by + dy}px) translate(-50%,-50%)`;
@@ -485,15 +635,12 @@ function attachDrag(el, id){
   el.addEventListener("pointermove", e => {
     if(!active) return;
     if(Math.hypot(e.clientX - sx, e.clientY - sy) > 4) moved = true;
-    const dx = e.clientX - cx;
-    const dy = e.clientY - cy;
-    const ang = Math.atan2(dy, dx);
-    let r = Math.max(SUN_R + MIN_GAP, Math.min(maxR, Math.hypot(dx, dy)));
+    const { ang, r, dist } = pointerToPolar(e.clientX, e.clientY);
     const px = cx + Math.cos(ang) * r;
     const py = cy + Math.sin(ang) * r;
     el.style.transform = `translate(${px}px, ${py}px) translate(-50%,-50%)`;
     const p = data.people.find(o => o.id === id);
-    applyVisual(el, p, distOf(r));
+    applyVisual(el, p, dist);
   });
 
   el.addEventListener("pointerup", e => {
@@ -502,11 +649,9 @@ function attachDrag(el, id){
     el.style.zIndex = 4;
     const p = data.people.find(o => o.id === id);
     if(moved){
-      const dx = e.clientX - cx;
-      const dy = e.clientY - cy;
-      let r = Math.max(SUN_R + MIN_GAP, Math.min(maxR, Math.hypot(dx, dy)));
-      p.angle = Math.atan2(dy, dx);
-      p.dist = distOf(r);
+      const { ang, dist } = pointerToPolar(e.clientX, e.clientY);
+      p.angle = ang;
+      p.dist = dist;
       persist();
       renderPanel();
     } else {
@@ -670,27 +815,86 @@ document.getElementById("formSave").onclick = () => {
   hide("formOverlay");
 };
 
+function renderOrbitList(){
+  const el = document.getElementById("orbitList");
+  if(!data.orbits.length){
+    el.innerHTML = `<div class="empty" style="padding:16px">Нет орбит — добавьте первую.</div>`;
+    return;
+  }
+  el.innerHTML = [...data.orbits].sort((a,b)=>a.dist-b.dist).map(o => `
+    <div class="orbit-item" data-id="${o.id}">
+      <span class="orbit-preview" style="border-color:${esc(o.color)};box-shadow:0 0 8px ${esc(o.color)}"></span>
+      <span class="orbit-meta"><div class="nm">${esc(o.name)}</div><div class="sub">${Math.round(o.dist*100)}% · ${o.width||1}px</div></span>
+    </div>`).join("");
+}
+
 function openSettings(){
-  document.getElementById("sLabel").value = data.sunLabel;
+  renderOrbitList();
   show("settingsOverlay");
 }
 
 document.getElementById("gearBtn").onclick = openSettings;
 document.getElementById("settingsCancel").onclick = () => hide("settingsOverlay");
 document.getElementById("settingsSave").onclick = () => {
-  data.sunLabel = document.getElementById("sLabel").value.trim() || "Я";
-  document.getElementById("sunLabel").textContent = data.sunLabel;
   persist();
   hide("settingsOverlay");
 };
 document.getElementById("resetBtn").onclick = () => {
   if(confirm("Удалить всех людей и вернуть пример по умолчанию?")){
     data = seed();
-    document.getElementById("sunLabel").textContent = data.sunLabel;
     persist();
+    syncRings();
     syncOrbs();
     renderPanel();
     hide("settingsOverlay");
+  }
+};
+
+
+let editOrbitId = null;
+const oDist = document.getElementById("oDist");
+const oDistVal = document.getElementById("oDistVal");
+oDist.addEventListener("input", () => { oDistVal.textContent = oDist.value + "%"; });
+
+function openOrbitForm(id){
+  editOrbitId = id || null;
+  const o = id ? data.orbits.find(x => x.id === id) : null;
+  document.getElementById("orbitFormTitle").textContent = o ? "Изменить орбиту" : "Новая орбита";
+  document.getElementById("oName").value = o ? o.name : "";
+  oDist.value = Math.round((o ? o.dist : 0.5) * 100);
+  oDistVal.textContent = oDist.value + "%";
+  document.getElementById("oWidth").value = o ? (o.width || 1) : 1;
+  document.getElementById("oColor").value = o && o.color && o.color.startsWith("#") ? o.color : "#ffffff";
+  document.getElementById("orbitDelete").style.display = o ? "inline" : "none";
+  show("orbitOverlay");
+  setTimeout(() => document.getElementById("oName").focus(), 60);
+}
+
+document.getElementById("addOrbitBtn").onclick = () => openOrbitForm(null);
+document.getElementById("orbitList").addEventListener("click", e => {
+  const row = e.target.closest(".orbit-item");
+  if(row) openOrbitForm(row.dataset.id);
+});
+document.getElementById("orbitCancel").onclick = () => hide("orbitOverlay");
+document.getElementById("orbitSave").onclick = () => {
+  const name = document.getElementById("oName").value.trim();
+  if(!name){ document.getElementById("oName").focus(); return; }
+  const dist = Math.max(0.05, Math.min(1, Number(oDist.value) / 100));
+  const width = Math.max(1, Math.min(12, Number(document.getElementById("oWidth").value) || 1));
+  const color = document.getElementById("oColor").value;
+  if(editOrbitId){
+    const o = data.orbits.find(x => x.id === editOrbitId);
+    o.name = name; o.dist = dist; o.width = width; o.color = color;
+  } else {
+    data.orbits.push({ id: uid(), name, dist, width, color });
+  }
+  persist(); syncRings(); renderOrbitList(); hide("orbitOverlay");
+};
+document.getElementById("orbitDelete").onclick = () => {
+  if(!editOrbitId) return;
+  if(confirm("Удалить эту орбиту?")){
+    data.orbits = data.orbits.filter(o => o.id !== editOrbitId);
+    persist(); syncRings(); renderOrbitList(); hide("orbitOverlay");
   }
 };
 
@@ -713,10 +917,8 @@ function init(){
   buildScene();
   makeStars();
   const loaded = loadData();
-  data = loaded || seed();
-  if(!data.groups) data.groups = {};
-  if(!data.people) data.people = [];
-  document.getElementById("sunLabel").textContent = data.sunLabel || "Я";
+  data = migrateData(loaded || seed());
+  syncRings();
   syncOrbs();
   renderPanel();
   requestAnimationFrame(loop);
