@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<!-- saved from url=(0042)file:///Users/bvjfba/Downloads/orbita.html -->
+<html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Орбита</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="./Орбита_files/css2" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#070512;
+  --bg-1:#0f0b22;
+  --bg-warm:#1f1230;
+  --sun-core:#ffe6b0;
+  --sun-glow:#ff9d4d;
+  --text:#ece8f4;
+  --muted:#948da8;
+  --panel:rgba(16,12,28,.66);
+  --panel-solid:#15102a;
+  --border:rgba(255,255,255,.08);
+  --border-strong:rgba(255,255,255,.15);
+  --ring:rgba(255,255,255,.045);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:"Golos Text",system-ui,sans-serif;
+  color:var(--text);
+  background:radial-gradient(120% 90% at 50% 46%, var(--bg-warm) 0%, var(--bg-1) 40%, var(--bg-0) 100%);
+  -webkit-font-smoothing:antialiased;
+  user-select:none;
+}
+
+/* ---------- космос ---------- */
+#space{position:fixed;inset:0;overflow:hidden;touch-action:none}
+#stars{position:absolute;inset:0;pointer-events:none}
+.star{position:absolute;border-radius:50%;background:#fff;opacity:.5;
+  animation:twinkle var(--tw,5s) ease-in-out infinite alternate}
+@keyframes twinkle{from{opacity:.12}to{opacity:.6}}
+
+.ring{position:absolute;left:50%;top:50%;border-radius:50%;
+  border:1px solid var(--ring);transform:translate(-50%,-50%);pointer-events:none}
+
+/* солнце = ты */
+#sun{position:absolute;left:50%;top:50%;width:60px;height:60px;border-radius:50%;
+  transform:translate(-50%,-50%);cursor:pointer;z-index:5;
+  background:radial-gradient(circle at 38% 34%, #fff7e6 0%, var(--sun-core) 34%, var(--sun-glow) 80%, #d9622a 100%);
+  box-shadow:0 0 12px 3px rgba(255,180,90,.5),0 0 50px 14px rgba(255,140,60,.3),0 0 100px 40px rgba(255,120,40,.14);
+  display:flex;align-items:center;justify-content:center;animation:pulse 7s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 12px 3px rgba(255,180,90,.5),0 0 50px 14px rgba(255,140,60,.3),0 0 100px 40px rgba(255,120,40,.14)}
+  50%{box-shadow:0 0 16px 5px rgba(255,190,110,.6),0 0 64px 20px rgba(255,150,70,.36),0 0 124px 52px rgba(255,120,40,.18)}}
+#sunLabel{font-family:"Cormorant Garamond",serif;font-size:23px;font-weight:600;color:#3a1d05;
+  font-style:italic;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.3)}
+
+/* орбы-люди */
+.orb{position:absolute;left:0;top:0;border-radius:50%;cursor:grab;z-index:4;will-change:transform;
+  transition:box-shadow .2s ease, filter .25s ease}
+.orb:active{cursor:grabbing}
+.orb .core{width:100%;height:100%;border-radius:50%}
+.orb .name{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  font-size:12px;color:var(--muted);white-space:nowrap;opacity:0;transition:opacity .25s ease;
+  pointer-events:none;text-shadow:0 0 8px rgba(0,0,0,.85)}
+.orb:hover .name{opacity:1}
+.orb.dim{filter:saturate(.3) brightness(.5);opacity:.35}
+.orb.flash{animation:flash .9s ease}
+@keyframes flash{40%{filter:brightness(1.9)}}
+
+/* ---------- интерфейс ---------- */
+.brand{position:fixed;top:22px;left:26px;z-index:20;pointer-events:none}
+.brand h1{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:32px;letter-spacing:.04em;line-height:1}
+.brand p{font-size:12.5px;color:var(--muted);margin-top:4px;max-width:210px;line-height:1.45}
+
+#panel{position:fixed;top:0;right:0;height:100%;width:300px;z-index:30;
+  background:var(--panel);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border-left:1px solid var(--border);display:flex;flex-direction:column;
+  transition:transform .35s cubic-bezier(.4,0,.2,1)}
+#panel.closed{transform:translateX(100%)}
+.panel-head{padding:22px 20px 14px;border-bottom:1px solid var(--border)}
+.search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);
+  border:1px solid var(--border);border-radius:12px;padding:9px 12px;margin-bottom:12px}
+.search input{background:none;border:none;outline:none;color:var(--text);font-size:14px;width:100%;font-family:inherit}
+.search input::placeholder{color:var(--muted)}
+.search svg{flex:0 0 auto;opacity:.55}
+.btn-add{width:100%;border:none;border-radius:12px;padding:11px;font-family:inherit;font-size:14px;
+  font-weight:500;cursor:pointer;color:#1a1208;
+  background:linear-gradient(135deg,var(--sun-core),var(--sun-glow));
+  box-shadow:0 4px 16px rgba(255,150,70,.26);transition:transform .15s ease,box-shadow .2s ease}
+.btn-add:hover{transform:translateY(-1px)}
+.btn-add:active{transform:translateY(0)}
+
+.list{flex:1;overflow-y:auto;padding:10px 10px 24px}
+.list::-webkit-scrollbar{width:8px}
+.list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:8px}
+.row{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:11px;cursor:pointer;transition:background .15s ease}
+.row:hover{background:rgba(255,255,255,.05)}
+.row .dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.row .meta{min-width:0;flex:1}
+.row .nm{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{color:var(--muted);font-size:13.5px;text-align:center;padding:34px 18px;line-height:1.5}
+
+.fab{position:fixed;z-index:31;width:44px;height:44px;border-radius:50%;border:1px solid var(--border-strong);
+  background:var(--panel);backdrop-filter:blur(18px);color:var(--text);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .2s ease}
+.fab:hover{background:rgba(255,255,255,.1)}
+#togglePanel{top:22px;right:24px}
+#gearBtn{bottom:22px;left:24px}
+
+.hint{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:20;
+  display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);pointer-events:none;
+  background:var(--panel);backdrop-filter:blur(14px);padding:7px 16px;border-radius:30px;border:1px solid var(--border)}
+.hint .bar{width:120px;height:5px;border-radius:3px;background:linear-gradient(90deg,#ff9d4d,#6ca8ff)}
+
+/* ---------- модалки ---------- */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(4,2,10,.55);backdrop-filter:blur(3px);
+  display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .22s ease}
+.overlay.open{opacity:1;pointer-events:auto}
+.modal{width:100%;max-width:380px;background:var(--panel-solid);border:1px solid var(--border-strong);
+  border-radius:20px;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.6);
+  transform:translateY(12px) scale(.98);transition:transform .22s ease}
+.overlay.open .modal{transform:translateY(0) scale(1)}
+.modal h2{font-family:"Cormorant Garamond",serif;font-size:26px;font-weight:600;margin-bottom:4px}
+.modal .card-group{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);margin-bottom:16px}
+.modal .card-group .dot{width:9px;height:9px;border-radius:50%}
+.modal .note{font-size:14.5px;line-height:1.55;color:#cfc9dd;white-space:pre-wrap;margin-bottom:20px;min-height:20px}
+.modal .note.empty-note{color:var(--muted);font-style:italic}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.field input[type=text],.field textarea{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:11px;padding:11px 13px;color:var(--text);font-family:inherit;font-size:14.5px;outline:none;transition:border-color .18s ease}
+.field input[type=text]:focus,.field textarea:focus{border-color:var(--sun-glow)}
+.field textarea{resize:vertical;min-height:70px}
+
+/* выбор цвета */
+.swatches{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;position:relative;transition:transform .12s ease}
+.sw:hover{transform:scale(1.1)}
+.sw.selected{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.15)}
+.sw.auto{width:auto;height:30px;border-radius:15px;padding:0 13px;font-family:inherit;font-size:12.5px;color:var(--text);
+  background:linear-gradient(90deg,#ff9d4d,#6ca8ff)}
+.sw.custom{overflow:hidden;background:conic-gradient(from 0deg,#ff6b6b,#ffd166,#8be9a3,#6ca8ff,#b69cff,#ff8fab,#ff6b6b)}
+.sw.custom input{position:absolute;inset:-4px;width:140%;height:140%;border:none;background:none;cursor:pointer;opacity:0}
+
+.modal-actions{display:flex;gap:10px;margin-top:8px}
+.modal-actions button{flex:1;padding:11px;border-radius:11px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;
+  border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);transition:background .15s ease}
+.modal-actions button:hover{background:rgba(255,255,255,.1)}
+.modal-actions .primary{border:none;color:#1a1208;background:linear-gradient(135deg,var(--sun-core),var(--sun-glow))}
+.modal-actions .danger{color:#ff9a9a;border-color:rgba(255,120,120,.3)}
+.modal-actions .danger:hover{background:rgba(255,80,80,.12)}
+.linkbtn{background:none;border:none;color:var(--muted);font-family:inherit;font-size:13px;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;padding:4px}
+.linkbtn:hover{color:var(--text)}
+
+@media(max-width:640px){
+  #panel{width:100%;max-width:330px}
+  .brand{top:18px;left:18px}
+  .brand h1{font-size:27px}
+  .hint{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="space"><div id="stars"><div class="star" style="left:49.704793496080036%;top:77.90861218464752%;width:0.8686696251397567px;height:0.8686696251397567px;--tw:6.8s;animation-delay:1.7s"></div><div class="star" style="left:41.621632864502736%;top:30.49916265162028%;width:0.898455406162475px;height:0.898455406162475px;--tw:8.8s;animation-delay:1.7s"></div><div class="star" style="left:71.77194073633922%;top:65.05701043786983%;width:1.5423832607725014px;height:1.5423832607725014px;--tw:5.2s;animation-delay:1.1s"></div><div class="star" style="left:83.76800937855988%;top:2.5741752777718174%;width:1.4029485701156783px;height:1.4029485701156783px;--tw:4.7s;animation-delay:2.4s"></div><div class="star" style="left:97.38680536430157%;top:69.60581109132687%;width:1.3340584122534593px;height:1.3340584122534593px;--tw:8.4s;animation-delay:1.4s"></div><div class="star" style="left:12.726689916724453%;top:39.271886763779676%;width:1.1301666974974416px;height:1.1301666974974416px;--tw:7.6s;animation-delay:1.4s"></div><div class="star" style="left:2.7605095008952585%;top:65.82995672877307%;width:0.7055054108975551px;height:0.7055054108975551px;--tw:5.9s;animation-delay:2.1s"></div><div class="star" style="left:34.52334201911423%;top:9.347098006609933%;width:1.8575067126414426px;height:1.8575067126414426px;--tw:4.8s;animation-delay:2.1s"></div><div class="star" style="left:13.715863524982886%;top:82.6041790762359%;width:1.641159961878955px;height:1.641159961878955px;--tw:5.4s;animation-delay:2.3s"></div><div class="star" style="left:83.24246949085455%;top:81.47499021663214%;width:1.6738157929317785px;height:1.6738157929317785px;--tw:7.1s;animation-delay:2.1s"></div><div class="star" style="left:24.242634925113748%;top:57.93966825288977%;width:0.5875087068439915px;height:0.5875087068439915px;--tw:4.9s;animation-delay:0.2s"></div><div class="star" style="left:44.18854317060309%;top:34.690463763575984%;width:1.840960563856136px;height:1.840960563856136px;--tw:4.2s;animation-delay:0.1s"></div><div class="star" style="left:8.681455754125455%;top:19.176496838761192%;width:0.7865420276542159px;height:0.7865420276542159px;--tw:8.5s;animation-delay:3.3s"></div><div class="star" style="left:22.360808730701965%;top:52.95836775381579%;width:0.9228677680512367px;height:0.9228677680512367px;--tw:7.7s;animation-delay:1.1s"></div><div class="star" style="left:89.28021897211126%;top:8.66581840224171%;width:1.8892946535565345px;height:1.8892946535565345px;--tw:6.9s;animation-delay:3.1s"></div><div class="star" style="left:14.23889386506948%;top:90.38498900207158%;width:1.476096962688818px;height:1.476096962688818px;--tw:6.3s;animation-delay:1.8s"></div><div class="star" style="left:50.98785882669357%;top:2.9638290743201345%;width:0.5502521774149182px;height:0.5502521774149182px;--tw:4.7s;animation-delay:3.3s"></div><div class="star" style="left:7.298458586875567%;top:88.47147972623846%;width:1.5444428715263814px;height:1.5444428715263814px;--tw:4.1s;animation-delay:0.3s"></div><div class="star" style="left:14.5052165579173%;top:74.78881014889592%;width:1.6133727826980273px;height:1.6133727826980273px;--tw:5.8s;animation-delay:1.4s"></div><div class="star" style="left:1.0350600322923342%;top:54.003717031695366%;width:0.7428243954135003px;height:0.7428243954135003px;--tw:3.5s;animation-delay:3.8s"></div><div class="star" style="left:33.779626838297474%;top:44.93696771796878%;width:1.6443175212955514px;height:1.6443175212955514px;--tw:6.2s;animation-delay:0.3s"></div><div class="star" style="left:24.39862093871329%;top:70.05198559678695%;width:1.7494386511662454px;height:1.7494386511662454px;--tw:8.0s;animation-delay:4.0s"></div><div class="star" style="left:86.70422161220527%;top:41.525547972546775%;width:1.396657396297183px;height:1.396657396297183px;--tw:7.4s;animation-delay:2.9s"></div><div class="star" style="left:23.584464458831945%;top:38.11261193877598%;width:1.7927803601546017px;height:1.7927803601546017px;--tw:5.6s;animation-delay:0.2s"></div><div class="star" style="left:8.38877443582675%;top:61.25597451897228%;width:0.8716818896289265px;height:0.8716818896289265px;--tw:7.4s;animation-delay:3.2s"></div><div class="star" style="left:84.64452956545401%;top:42.93207673379339%;width:1.4770695696521434px;height:1.4770695696521434px;--tw:3.5s;animation-delay:0.6s"></div><div class="star" style="left:25.89205584440212%;top:88.4479492458231%;width:1.8133794517033848px;height:1.8133794517033848px;--tw:4.4s;animation-delay:1.6s"></div><div class="star" style="left:53.97599764204289%;top:73.48391382647111%;width:1.0054212366776465px;height:1.0054212366776465px;--tw:7.0s;animation-delay:0.8s"></div><div class="star" style="left:59.505251522844794%;top:32.275914649662006%;width:0.913731196616306px;height:0.913731196616306px;--tw:7.0s;animation-delay:3.2s"></div><div class="star" style="left:71.6666764783956%;top:68.76051166115599%;width:1.7558694274331303px;height:1.7558694274331303px;--tw:8.7s;animation-delay:0.9s"></div><div class="star" style="left:49.568102140197425%;top:51.645502495338924%;width:0.5898434393946936px;height:0.5898434393946936px;--tw:7.6s;animation-delay:1.1s"></div><div class="star" style="left:70.60634278793098%;top:54.6992522187874%;width:1.8705597313497948px;height:1.8705597313497948px;--tw:5.2s;animation-delay:2.1s"></div><div class="star" style="left:8.606231026778389%;top:29.28906966069249%;width:1.5842297998529402px;height:1.5842297998529402px;--tw:4.8s;animation-delay:1.2s"></div><div class="star" style="left:2.3830185993828135%;top:28.364212216080443%;width:1.0764759856083466px;height:1.0764759856083466px;--tw:4.4s;animation-delay:2.6s"></div><div class="star" style="left:3.555311357613211%;top:3.1091137025968885%;width:1.4082949149834032px;height:1.4082949149834032px;--tw:4.7s;animation-delay:0.8s"></div><div class="star" style="left:69.53349885197518%;top:12.857827872948391%;width:1.954656279309073px;height:1.954656279309073px;--tw:6.6s;animation-delay:2.4s"></div><div class="star" style="left:40.488562381593816%;top:76.17541518753445%;width:0.9674311938684212px;height:0.9674311938684212px;--tw:3.2s;animation-delay:0.4s"></div><div class="star" style="left:80.42890714776668%;top:57.917524997648904%;width:1.32930258912645px;height:1.32930258912645px;--tw:7.9s;animation-delay:2.8s"></div><div class="star" style="left:82.35427056355692%;top:12.978946604789632%;width:1.227845615405886px;height:1.227845615405886px;--tw:6.8s;animation-delay:2.3s"></div><div class="star" style="left:1.2051324634092753%;top:94.42673358105186%;width:1.0492716474774666px;height:1.0492716474774666px;--tw:5.4s;animation-delay:2.2s"></div><div class="star" style="left:26.402257960478302%;top:53.64549364671544%;width:1.8636298098041375px;height:1.8636298098041375px;--tw:6.4s;animation-delay:1.6s"></div><div class="star" style="left:70.13575878035397%;top:13.993517369417773%;width:0.8334093590688768px;height:0.8334093590688768px;--tw:3.1s;animation-delay:2.9s"></div><div class="star" style="left:6.797953115735544%;top:43.16998842873374%;width:1.915750096874687px;height:1.915750096874687px;--tw:6.4s;animation-delay:0.9s"></div><div class="star" style="left:14.92407909281932%;top:79.35374817123733%;width:1.1463754758872138px;height:1.1463754758872138px;--tw:8.9s;animation-delay:3.1s"></div><div class="star" style="left:42.373559192491385%;top:43.421938640064816%;width:0.5954619774980874px;height:0.5954619774980874px;--tw:6.4s;animation-delay:2.4s"></div><div class="star" style="left:30.499843049459873%;top:96.2982980555328%;width:1.0434014611202411px;height:1.0434014611202411px;--tw:4.1s;animation-delay:0.3s"></div><div class="star" style="left:77.46446283363639%;top:64.46698444225129%;width:1.1365115219019695px;height:1.1365115219019695px;--tw:8.8s;animation-delay:2.7s"></div><div class="star" style="left:53.83747566594622%;top:39.87895745330873%;width:0.9309604569132266px;height:0.9309604569132266px;--tw:3.8s;animation-delay:2.6s"></div><div class="star" style="left:18.338998313525067%;top:5.495910110391311%;width:0.8460994464891447px;height:0.8460994464891447px;--tw:8.6s;animation-delay:1.4s"></div><div class="star" style="left:63.05460017676593%;top:1.6514930016796825%;width:1.1972318432661568px;height:1.1972318432661568px;--tw:5.0s;animation-delay:0.3s"></div><div class="star" style="left:12.994308613667705%;top:39.56203675715388%;width:1.3191274496107652px;height:1.3191274496107652px;--tw:4.2s;animation-delay:2.1s"></div><div class="star" style="left:76.98741627427538%;top:26.681864676769617%;width:1.6432860800859452px;height:1.6432860800859452px;--tw:3.9s;animation-delay:2.1s"></div><div class="star" style="left:30.96271820370181%;top:99.89021029694769%;width:0.8902512962208556px;height:0.8902512962208556px;--tw:8.5s;animation-delay:0.4s"></div><div class="star" style="left:31.629462468268986%;top:60.101379225894924%;width:1.2998511348601658px;height:1.2998511348601658px;--tw:8.0s;animation-delay:2.0s"></div><div class="star" style="left:99.30966746573144%;top:31.11595135782007%;width:1.4368008048916863px;height:1.4368008048916863px;--tw:5.2s;animation-delay:2.6s"></div><div class="star" style="left:48.1262378747012%;top:1.8682814671730386%;width:1.0056840480087124px;height:1.0056840480087124px;--tw:6.4s;animation-delay:2.1s"></div><div class="star" style="left:63.01440238025473%;top:85.26950781027074%;width:1.6398890623462477px;height:1.6398890623462477px;--tw:5.8s;animation-delay:0.6s"></div><div class="star" style="left:20.63412135984084%;top:18.25738407118961%;width:1.923659152082373px;height:1.923659152082373px;--tw:6.7s;animation-delay:3.7s"></div><div class="star" style="left:19.07913538292415%;top:34.266722477105674%;width:0.8695756508842751px;height:0.8695756508842751px;--tw:3.1s;animation-delay:3.7s"></div><div class="star" style="left:11.598024088263802%;top:16.040492410074812%;width:1.2304122727397289px;height:1.2304122727397289px;--tw:8.5s;animation-delay:3.8s"></div><div class="star" style="left:68.59176674463401%;top:24.001015544050354%;width:1.7605177538852308px;height:1.7605177538852308px;--tw:4.7s;animation-delay:2.2s"></div><div class="star" style="left:44.27432951392933%;top:44.42917770057885%;width:1.9276606358527006px;height:1.9276606358527006px;--tw:5.5s;animation-delay:1.5s"></div><div class="star" style="left:84.44263779882307%;top:33.66060114633884%;width:1.867911099724306px;height:1.867911099724306px;--tw:7.5s;animation-delay:1.8s"></div><div class="star" style="left:2.706704086764977%;top:77.74086981068524%;width:1.3464946497342638px;height:1.3464946497342638px;--tw:8.7s;animation-delay:3.0s"></div><div class="star" style="left:95.7000301093829%;top:77.89097776618433%;width:0.6490020367694034px;height:0.6490020367694034px;--tw:8.7s;animation-delay:3.0s"></div><div class="star" style="left:69.11472235959651%;top:67.18452889306164%;width:1.8816396477220274px;height:1.8816396477220274px;--tw:4.7s;animation-delay:3.5s"></div><div class="star" style="left:43.88040193187896%;top:82.67722998750445%;width:1.1777876133546297px;height:1.1777876133546297px;--tw:6.8s;animation-delay:0.7s"></div><div class="star" style="left:90.75217111571556%;top:97.79280735338247%;width:0.5519949953741492px;height:0.5519949953741492px;--tw:6.5s;animation-delay:3.7s"></div><div class="star" style="left:8.8123291228548%;top:90.10699099990124%;width:0.5393850274441976px;height:0.5393850274441976px;--tw:8.6s;animation-delay:0.4s"></div><div class="star" style="left:14.906928280239951%;top:62.75473344690526%;width:0.6191370453549275px;height:0.6191370453549275px;--tw:4.7s;animation-delay:0.6s"></div><div class="star" style="left:12.527796591136875%;top:66.02028095012813%;width:1.886092995554705px;height:1.886092995554705px;--tw:8.6s;animation-delay:1.5s"></div><div class="star" style="left:23.221751520443167%;top:85.82879303168265%;width:1.5990051234164424px;height:1.5990051234164424px;--tw:5.7s;animation-delay:1.9s"></div><div class="star" style="left:48.79242751226857%;top:28.276249419377198%;width:1.5354963543915265px;height:1.5354963543915265px;--tw:3.2s;animation-delay:1.5s"></div><div class="star" style="left:62.57707418061143%;top:38.284243661350445%;width:1.2832271578987886px;height:1.2832271578987886px;--tw:8.4s;animation-delay:2.8s"></div><div class="star" style="left:4.142347093063769%;top:33.60612393552989%;width:1.8568485182661856px;height:1.8568485182661856px;--tw:3.2s;animation-delay:0.1s"></div><div class="star" style="left:38.479717020849925%;top:56.53818880978013%;width:1.9115980110193522px;height:1.9115980110193522px;--tw:6.5s;animation-delay:2.5s"></div><div class="star" style="left:50.395479202743346%;top:39.22770593830478%;width:1.4471746851186902px;height:1.4471746851186902px;--tw:8.6s;animation-delay:2.9s"></div><div class="star" style="left:35.419769491272305%;top:77.18767425086337%;width:0.9477084485437677px;height:0.9477084485437677px;--tw:7.1s;animation-delay:2.8s"></div><div class="star" style="left:33.98122271866796%;top:14.927142885091216%;width:0.6052105879391835px;height:0.6052105879391835px;--tw:3.4s;animation-delay:1.4s"></div><div class="star" style="left:35.7692359209933%;top:51.736289263145174%;width:1.3201141094453501px;height:1.3201141094453501px;--tw:8.0s;animation-delay:3.4s"></div><div class="star" style="left:20.82707053441294%;top:60.68667478877758%;width:0.6617882923961781px;height:0.6617882923961781px;--tw:3.1s;animation-delay:1.1s"></div><div class="star" style="left:79.27876153944368%;top:58.36416564976582%;width:1.2332632325021915px;height:1.2332632325021915px;--tw:5.3s;animation-delay:2.7s"></div><div class="star" style="left:5.978150308336961%;top:31.933092501511183%;width:0.7280034764198611px;height:0.7280034764198611px;--tw:4.3s;animation-delay:1.3s"></div><div class="star" style="left:11.54201006661345%;top:63.721700319012456%;width:0.9099046136537343px;height:0.9099046136537343px;--tw:3.8s;animation-delay:3.0s"></div><div class="star" style="left:42.145510997243406%;top:60.96089115790001%;width:0.9476348653675937px;height:0.9476348653675937px;--tw:6.8s;animation-delay:2.3s"></div><div class="star" style="left:68.82158222313386%;top:7.690893500431029%;width:0.8947737586903859px;height:0.8947737586903859px;--tw:4.4s;animation-delay:1.3s"></div><div class="star" style="left:33.57558542424625%;top:89.94840227839478%;width:1.4423653584786005px;height:1.4423653584786005px;--tw:4.2s;animation-delay:3.2s"></div><div class="star" style="left:14.201600000073888%;top:30.94264315372943%;width:1.4275717917759847px;height:1.4275717917759847px;--tw:4.6s;animation-delay:2.2s"></div><div class="star" style="left:58.22728063073209%;top:23.6074364157567%;width:1.3177077374551693px;height:1.3177077374551693px;--tw:7.2s;animation-delay:2.6s"></div><div class="star" style="left:18.54207750455711%;top:74.42576030240049%;width:0.9851142886617861px;height:0.9851142886617861px;--tw:7.0s;animation-delay:3.1s"></div></div><div class="ring" style="height: 392.333px; width: 392.333px;"></div><div class="ring" style="height: 676.667px; width: 676.667px;"></div><div class="ring" style="height: 961px; width: 961px;"></div><div id="sun"><span id="sunLabel">Я</span></div><div class="orb" style="height: 31.48px; width: 31.48px; box-shadow: rgba(235, 244, 78, 0.84) 0px 0px 21.44px 3.52px; transform: translate(1155.89px, 436.965px) translate(-50%, -50%);"><div class="core" style="background: radial-gradient(circle at 36% 32%, rgb(255, 255, 255) 0%, rgb(235, 244, 78) 62%, rgb(235, 244, 78) 100%);"></div><span class="name">Аня</span></div><div class="orb" style="height: 30.16px; width: 30.16px; box-shadow: rgba(204, 243, 79, 0.796) 0px 0px 20.48px 3.34px; transform: translate(1003.86px, 646.889px) translate(-50%, -50%);"><div class="core" style="background: radial-gradient(circle at 36% 32%, rgb(255, 255, 255) 0%, rgb(204, 243, 79) 62%, rgb(204, 243, 79) 100%);"></div><span class="name">Макс</span></div><div class="orb" style="height: 24.88px; width: 24.88px; box-shadow: rgba(82, 237, 74, 0.627) 0px 0px 16.64px 2.62px; transform: translate(1335.21px, 633.093px) translate(-50%, -50%);"><div class="core" style="background: radial-gradient(circle at 36% 32%, rgb(255, 255, 255) 0%, rgb(82, 237, 74) 62%, rgb(82, 237, 74) 100%);"></div><span class="name">Лена</span></div><div class="orb" style="height: 24px; width: 24px; box-shadow: rgba(75, 236, 88, 0.6) 0px 0px 16px 2.5px; transform: translate(861.859px, 423.408px) translate(-50%, -50%);"><div class="core" style="background: radial-gradient(circle at 36% 32%, rgb(255, 255, 255) 0%, rgb(75, 236, 88) 62%, rgb(75, 236, 88) 100%);"></div><span class="name">Дима</span></div><div class="orb" style="height: 19.16px; width: 19.16px; box-shadow: rgba(75, 231, 189, 0.447) 0px 0px 12.48px 1.84px; transform: translate(1062.23px, 906.373px) translate(-50%, -50%);"><div class="core" style="background: radial-gradient(circle at 36% 32%, rgb(255, 255, 255) 0%, rgb(75, 231, 189) 62%, rgb(75, 231, 189) 100%);"></div><span class="name">Костя</span></div><div class="orb" style="height: 16.96px; width: 16.96px; box-shadow: rgba(73, 223, 228, 0.376) 0px 0px 10.88px 1.54px; transform: translate(836.749px, 233.904px) translate(-50%, -50%);"><div class="core" style="background: radial-gradient(circle at 36% 32%, rgb(255, 255, 255) 0%, rgb(73, 223, 228) 62%, rgb(73, 223, 228) 100%);"></div><span class="name">Соня</span></div></div>
+
+<div class="brand">
+  <h1>Орбита</h1>
+  <p>Чем ближе к центру — тем теплее связь. Тяни точки, цвет меняется вместе с дистанцией.</p>
+</div>
+
+<button class="fab" id="togglePanel" title="Список">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"></path></svg>
+</button>
+<button class="fab" id="gearBtn" title="Настройки">
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+</button>
+
+<div class="hint"><span>ближе</span><span class="bar"></span><span>дальше</span></div>
+
+<aside id="panel">
+  <div class="panel-head">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3" stroke-linecap="round"></path></svg>
+      <input id="searchInput" type="text" placeholder="Поиск по имени…">
+    </div>
+    <button class="btn-add" id="addBtn">+ Добавить человека</button>
+  </div>
+  <div class="list" id="list">
+      <div class="row" data-id="mplrzyy8b0m6">
+        <span class="dot" style="background:hsl(63 88% 63%)"></span>
+        <span class="meta"><div class="nm">Аня</div><div class="sub">Близкий круг</div></span>
+      </div>
+      <div class="row" data-id="mplrzyy8k6oj">
+        <span class="dot" style="background:hsl(74 87% 63%)"></span>
+        <span class="meta"><div class="nm">Макс</div><div class="sub">Близкий круг</div></span>
+      </div>
+      <div class="row" data-id="mplrzyy87grx">
+        <span class="dot" style="background:hsl(117 82% 61%)"></span>
+        <span class="meta"><div class="nm">Лена</div><div class="sub">Друзья</div></span>
+      </div>
+      <div class="row" data-id="mplrzyy8ecj5">
+        <span class="dot" style="background:hsl(125 81% 61%)"></span>
+        <span class="meta"><div class="nm">Дима</div><div class="sub">Друзья</div></span>
+      </div>
+      <div class="row" data-id="mplrzyy8y2ka">
+        <span class="dot" style="background:hsl(164 76% 60%)"></span>
+        <span class="meta"><div class="nm">Костя</div><div class="sub">Тёплые знакомые</div></span>
+      </div>
+      <div class="row" data-id="mplrzyy8xtzd">
+        <span class="dot" style="background:hsl(182 74% 59%)"></span>
+        <span class="meta"><div class="nm">Соня</div><div class="sub">Другой вайб</div></span>
+      </div></div>
+</aside>
+
+<!-- карточка человека -->
+<div class="overlay" id="cardOverlay">
+  <div class="modal">
+    <h2 id="cardName"></h2>
+    <div class="card-group"><span class="dot" id="cardDot"></span><span id="cardGroup"></span></div>
+    <div class="note" id="cardNote"></div>
+    <div class="modal-actions">
+      <button id="cardEdit">Изменить</button>
+      <button class="danger" id="cardDelete">Удалить</button>
+    </div>
+    <div style="text-align:center;margin-top:10px"><button class="linkbtn" id="cardClose">Закрыть</button></div>
+  </div>
+</div>
+
+<!-- форма -->
+<div class="overlay" id="formOverlay">
+  <div class="modal">
+    <h2 id="formTitle">Новый человек</h2>
+    <div style="height:14px"></div>
+    <div class="field">
+      <label>Имя</label>
+      <input id="fName" type="text" placeholder="Как зовут">
+    </div>
+    <div class="field">
+      <label>Группа</label>
+      <input id="fGroup" type="text" list="groupList" placeholder="Например: Друзья">
+      <datalist id="groupList"></datalist>
+    </div>
+    <div class="field">
+      <label>Цвет точки</label>
+      <div class="swatches" id="fSwatches">
+        <button type="button" class="sw auto" data-c="auto" title="Цвет по близости">авто</button>
+        <button type="button" class="sw" data-c="#f4a259" style="background:#f4a259"></button>
+        <button type="button" class="sw" data-c="#5fd0b4" style="background:#5fd0b4"></button>
+        <button type="button" class="sw" data-c="#6ca8ff" style="background:#6ca8ff"></button>
+        <button type="button" class="sw" data-c="#b69cff" style="background:#b69cff"></button>
+        <button type="button" class="sw" data-c="#ff8fab" style="background:#ff8fab"></button>
+        <label class="sw custom" title="Свой цвет"><input id="fColor" type="color" value="#ffd166"></label>
+      </div>
+    </div>
+    <div class="field">
+      <label>Заметка</label>
+      <textarea id="fNote" placeholder="Что важно помнить про этого человека"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" id="formSave">Сохранить</button>
+      <button id="formCancel">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- настройки -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <h2>Настройки</h2>
+    <div style="height:16px"></div>
+    <div class="field">
+      <label>Подпись в центре (это ты)</label>
+      <input id="sLabel" type="text" maxlength="3" placeholder="Я">
+    </div>
+    <div class="modal-actions">
+      <button class="primary" id="settingsSave">Сохранить</button>
+      <button id="settingsCancel">Отмена</button>
+    </div>
+    <div style="text-align:center;margin-top:14px">
+      <button class="linkbtn" id="resetBtn" style="color:#ff9a9a">Сбросить все данные</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   ХРАНИЛИЩЕ
+   В среде Claude доступен window.storage (данные переживают
+   перезагрузку). При открытии файла локально — localStorage.
+   ============================================================ */
+const Store = (() => {
+  const KEY = "orbita.data.v2";
+  if (typeof window !== "undefined" && window.storage) {
+    return {
+      async load(){ try{ const r = await window.storage.get(KEY); return r ? JSON.parse(r.value) : null; }catch(e){ return null; } },
+      async save(d){ try{ await window.storage.set(KEY, JSON.stringify(d)); }catch(e){ console.warn("save", e); } }
+    };
+  }
+  try {
+    const t = "__orbita_t"; localStorage.setItem(t,"1"); localStorage.removeItem(t);
+    return {
+      async load(){ const v = localStorage.getItem(KEY); return v ? JSON.parse(v) : null; },
+      async save(d){ localStorage.setItem(KEY, JSON.stringify(d)); }
+    };
+  } catch(e){
+    let mem = null;
+    return { async load(){ return mem; }, async save(d){ mem = d; } };
+  }
+})();
+
+/* ============================================================
+   ДАННЫЕ
+   человек: { id, name, group, note, angle, dist (0..1), color|null }
+   color = null  → цвет автоматически по близости (тёплый→холодный)
+   color = "#.." → заданный вручную, не меняется при перетаскивании
+   ============================================================ */
+let data = { sunLabel:"Я", groups:{}, people:[] };
+
+function seed(){
+  return {
+    sunLabel:"Я",
+    groups:{ "Близкий круг":1, "Друзья":1, "Тёплые знакомые":1, "Другой вайб":1 },
+    people:[
+      mk("Аня","Близкий круг","Знаю со школы. Можно звонить в любое время.",0.16,-1.1),
+      mk("Макс","Близкий круг","Понимает без слов.",0.22,2.4),
+      mk("Лена","Друзья","Вместе ходим на скалодром.",0.46,0.4),
+      mk("Дима","Друзья","Давно не виделись — стоит написать.",0.5,3.6),
+      mk("Костя","Тёплые знакомые","Коллега, приятно общаться.",0.72,1.7),
+      mk("Соня","Другой вайб","Другой ритм жизни, но цепляет.",0.82,-2.3)
+    ]
+  };
+}
+function mk(name,group,note,dist,angle,color=null){ return { id:uid(), name, group, note, dist, angle, color }; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function registerGroup(name){ if(name && !(name in data.groups)) data.groups[name]=1; }
+
+/* цвет по близости: 34° тёплый оранжевый → 215° холодный синий */
+function autoHsl(dist){
+  const h = 34 + (215-34)*dist;
+  const s = 92 - 22*dist;
+  const l = 64 - 6*dist;
+  return {h, s, l};
+}
+function coreColor(p, dist){
+  if(p.color) return p.color;
+  const c = autoHsl(dist); return `hsl(${c.h.toFixed(0)} ${c.s.toFixed(0)}% ${c.l.toFixed(0)}%)`;
+}
+function glowColor(p, dist, a){
+  if(p.color) return hexA(p.color, a);
+  const c = autoHsl(dist); return `hsla(${c.h.toFixed(0)},${c.s.toFixed(0)}%,${c.l.toFixed(0)}%,${a})`;
+}
+function hexA(hex,a){
+  hex=hex.replace("#",""); if(hex.length===3) hex=hex.split("").map(x=>x+x).join("");
+  const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* ============================================================
+   ГЕОМЕТРИЯ
+   ============================================================ */
+const space = document.getElementById("space");
+const stars = document.getElementById("stars");
+let cx=0, cy=0, maxR=0;
+const SUN_R=30, MIN_GAP=24;
+let rings=[];
+
+function layout(){
+  cx=space.clientWidth/2; cy=space.clientHeight/2;
+  maxR=Math.min(cx,cy)-60;
+  rings.forEach((r,i)=>{ const rad=(SUN_R+MIN_GAP)+(maxR-(SUN_R+MIN_GAP))*((i+1)/rings.length);
+    r.style.width=r.style.height=(rad*2)+"px"; });
+}
+function radiusOf(dist){ const minR=SUN_R+MIN_GAP; return minR+dist*(maxR-minR); }
+function distOf(rpx){ const minR=SUN_R+MIN_GAP; return Math.max(0,Math.min(1,(rpx-minR)/(maxR-minR))); }
+
+function makeStars(){
+  const n=Math.min(90,Math.floor(window.innerWidth*window.innerHeight/16000));
+  let h="";
+  for(let i=0;i<n;i++){ const x=Math.random()*100,y=Math.random()*100,s=Math.random()*1.5+0.5,tw=(Math.random()*6+3).toFixed(1);
+    h+=`<div class="star" style="left:${x}%;top:${y}%;width:${s}px;height:${s}px;--tw:${tw}s;animation-delay:${(Math.random()*4).toFixed(1)}s"></div>`; }
+  stars.innerHTML=h;
+}
+function buildScene(){
+  rings=[]; for(let i=0;i<3;i++){ const r=document.createElement("div"); r.className="ring"; space.appendChild(r); rings.push(r); }
+  const sun=document.createElement("div"); sun.id="sun"; sun.innerHTML=`<span id="sunLabel"></span>`;
+  sun.addEventListener("click",openSettings); space.appendChild(sun);
+  layout();
+}
+
+/* ============================================================
+   ОРБЫ
+   ============================================================ */
+const orbEls=new Map();
+let draggingId=null;
+
+/* внешний вид орба для заданной дистанции (цвет + свечение + размер) */
+function applyVisual(el,p,dist){
+  const size=13+(1-dist)*22;
+  const glow=0.25+(1-dist)*0.7;
+  el.style.width=el.style.height=size+"px";
+  const c=coreColor(p,dist);
+  el.querySelector(".core").style.background=`radial-gradient(circle at 36% 32%, #fff 0%, ${c} 62%, ${c} 100%)`;
+  el.style.boxShadow=`0 0 ${8+(1-dist)*16}px ${1+(1-dist)*3}px ${glowColor(p,dist,glow)}`;
+}
+
+function syncOrbs(){
+  for(const [id,el] of orbEls){ if(!data.people.find(p=>p.id===id)){ el.remove(); orbEls.delete(id); } }
+  data.people.forEach(p=>{
+    let el=orbEls.get(p.id);
+    if(!el){
+      el=document.createElement("div"); el.className="orb";
+      el.innerHTML=`<div class="core"></div><span class="name"></span>`;
+      el._drift={ ax:Math.random()*6+5, ay:Math.random()*6+5, sx:Math.random()*.5+.25, sy:Math.random()*.5+.25,
+                  px:Math.random()*Math.PI*2, py:Math.random()*Math.PI*2 };
+      attachDrag(el,p.id); space.appendChild(el); orbEls.set(p.id,el);
+    }
+    applyVisual(el,p,p.dist);
+    el.querySelector(".name").textContent=p.name;
+  });
+}
+
+/* дрейф */
+let t0=performance.now();
+function loop(now){
+  const t=(now-t0)/1000;
+  data.people.forEach(p=>{
+    const el=orbEls.get(p.id); if(!el || p.id===draggingId) return;
+    const d=el._drift, r=radiusOf(p.dist);
+    const bx=cx+Math.cos(p.angle)*r, by=cy+Math.sin(p.angle)*r;
+    const dx=Math.sin(t*d.sx+d.px)*d.ax, dy=Math.cos(t*d.sy+d.py)*d.ay;
+    el.style.transform=`translate(${bx+dx}px, ${by+dy}px) translate(-50%,-50%)`;
+  });
+  requestAnimationFrame(loop);
+}
+
+/* перетаскивание (+ отличие клика от драга, + живой цвет) */
+function attachDrag(el,id){
+  let sx,sy,moved,active=false;
+  el.addEventListener("pointerdown",e=>{
+    e.preventDefault(); active=true; moved=false; draggingId=id; sx=e.clientX; sy=e.clientY;
+    el.setPointerCapture(e.pointerId); el.style.zIndex=9;
+  });
+  el.addEventListener("pointermove",e=>{
+    if(!active) return;
+    if(Math.hypot(e.clientX-sx,e.clientY-sy)>4) moved=true;
+    const dx=e.clientX-cx, dy=e.clientY-cy, ang=Math.atan2(dy,dx);
+    let r=Math.max(SUN_R+MIN_GAP,Math.min(maxR,Math.hypot(dx,dy)));
+    const px=cx+Math.cos(ang)*r, py=cy+Math.sin(ang)*r;
+    el.style.transform=`translate(${px}px, ${py}px) translate(-50%,-50%)`;
+    const p=data.people.find(o=>o.id===id);
+    applyVisual(el,p,distOf(r)); // цвет и размер меняются прямо во время движения
+  });
+  el.addEventListener("pointerup",e=>{
+    if(!active) return; active=false; el.style.zIndex=4;
+    const p=data.people.find(o=>o.id===id);
+    if(moved){
+      const dx=e.clientX-cx, dy=e.clientY-cy;
+      let r=Math.max(SUN_R+MIN_GAP,Math.min(maxR,Math.hypot(dx,dy)));
+      p.angle=Math.atan2(dy,dx); p.dist=distOf(r);
+      persist(); renderPanel();
+    } else { openCard(id); }
+    draggingId=null;
+  });
+}
+
+/* ============================================================
+   ПАНЕЛЬ
+   ============================================================ */
+const listEl=document.getElementById("list");
+const searchInput=document.getElementById("searchInput");
+
+function renderPanel(){
+  const q=searchInput.value.trim().toLowerCase();
+  const people=[...data.people].sort((a,b)=>a.dist-b.dist);
+  const shown=people.filter(p=>!q||p.name.toLowerCase().includes(q));
+  if(data.people.length===0){
+    listEl.innerHTML=`<div class="empty">Пока пусто.<br>Нажми «+ Добавить человека», чтобы поместить первую точку на орбиту.</div>`;
+  } else if(shown.length===0){
+    listEl.innerHTML=`<div class="empty">Никого не нашлось по запросу «${esc(q)}».</div>`;
+  } else {
+    listEl.innerHTML=shown.map(p=>`
+      <div class="row" data-id="${p.id}">
+        <span class="dot" style="background:${coreColor(p,p.dist)}"></span>
+        <span class="meta"><div class="nm">${esc(p.name)}</div><div class="sub">${esc(p.group)}</div></span>
+      </div>`).join("");
+  }
+  orbEls.forEach((el,id)=>{ const p=data.people.find(o=>o.id===id);
+    el.classList.toggle("dim", q && p && !p.name.toLowerCase().includes(q)); });
+}
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+listEl.addEventListener("click",e=>{
+  const row=e.target.closest(".row"); if(!row) return;
+  const el=orbEls.get(row.dataset.id);
+  if(el){ el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+  openCard(row.dataset.id);
+});
+searchInput.addEventListener("input",renderPanel);
+
+/* ============================================================
+   МОДАЛКИ
+   ============================================================ */
+function show(id){ document.getElementById(id).classList.add("open"); }
+function hide(id){ document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{ if(e.target===o) o.classList.remove("open"); }));
+
+/* карточка */
+let currentId=null;
+function openCard(id){
+  const p=data.people.find(o=>o.id===id); if(!p) return; currentId=id;
+  document.getElementById("cardName").textContent=p.name;
+  document.getElementById("cardGroup").textContent=p.group;
+  document.getElementById("cardDot").style.background=coreColor(p,p.dist);
+  const note=document.getElementById("cardNote");
+  note.textContent=p.note||"Без заметки"; note.classList.toggle("empty-note",!p.note);
+  show("cardOverlay");
+}
+document.getElementById("cardClose").onclick=()=>hide("cardOverlay");
+document.getElementById("cardEdit").onclick=()=>{ hide("cardOverlay"); openForm(currentId); };
+document.getElementById("cardDelete").onclick=()=>{
+  if(confirm("Удалить этого человека с орбиты?")){
+    data.people=data.people.filter(p=>p.id!==currentId);
+    persist(); syncOrbs(); renderPanel(); hide("cardOverlay");
+  }
+};
+
+/* форма + выбор цвета */
+let editId=null, formColor=null;
+const swWrap=document.getElementById("fSwatches");
+const fColor=document.getElementById("fColor");
+function setSelected(el){ swWrap.querySelectorAll(".sw").forEach(b=>b.classList.remove("selected")); if(el) el.classList.add("selected"); }
+swWrap.addEventListener("click",e=>{
+  const b=e.target.closest(".sw"); if(!b) return;
+  if(b.classList.contains("custom")) return;          // обрабатывает сам input
+  formColor = b.dataset.c==="auto" ? null : b.dataset.c;
+  setSelected(b);
+});
+fColor.addEventListener("input",()=>{ formColor=fColor.value; setSelected(swWrap.querySelector(".custom")); });
+
+function refreshGroupList(){
+  document.getElementById("groupList").innerHTML=Object.keys(data.groups).map(g=>`<option value="${esc(g)}">`).join("");
+}
+function openForm(id){
+  editId=id||null; refreshGroupList();
+  const p=id?data.people.find(o=>o.id===id):null;
+  document.getElementById("formTitle").textContent=p?"Изменить":"Новый человек";
+  document.getElementById("fName").value=p?p.name:"";
+  document.getElementById("fGroup").value=p?p.group:"";
+  document.getElementById("fNote").value=p?p.note:"";
+  // инициализация выбора цвета
+  formColor=p?p.color:null;
+  if(!formColor){ setSelected(swWrap.querySelector('[data-c="auto"]')); }
+  else {
+    const preset=swWrap.querySelector(`[data-c="${formColor}"]`);
+    if(preset){ setSelected(preset); } else { fColor.value=formColor; setSelected(swWrap.querySelector(".custom")); }
+  }
+  show("formOverlay"); setTimeout(()=>document.getElementById("fName").focus(),60);
+}
+document.getElementById("addBtn").onclick=()=>openForm(null);
+document.getElementById("formCancel").onclick=()=>hide("formOverlay");
+document.getElementById("formSave").onclick=()=>{
+  const name=document.getElementById("fName").value.trim();
+  const group=document.getElementById("fGroup").value.trim()||"Без группы";
+  const note=document.getElementById("fNote").value.trim();
+  if(!name){ document.getElementById("fName").focus(); return; }
+  registerGroup(group);
+  if(editId){ const p=data.people.find(o=>o.id===editId); p.name=name; p.group=group; p.note=note; p.color=formColor; }
+  else { data.people.push(mk(name,group,note,0.55+Math.random()*0.1,Math.random()*Math.PI*2,formColor)); }
+  persist(); syncOrbs(); renderPanel(); hide("formOverlay");
+};
+
+/* настройки */
+function openSettings(){ document.getElementById("sLabel").value=data.sunLabel; show("settingsOverlay"); }
+document.getElementById("gearBtn").onclick=openSettings;
+document.getElementById("settingsCancel").onclick=()=>hide("settingsOverlay");
+document.getElementById("settingsSave").onclick=()=>{
+  data.sunLabel=document.getElementById("sLabel").value.trim()||"Я";
+  document.getElementById("sunLabel").textContent=data.sunLabel; persist(); hide("settingsOverlay");
+};
+document.getElementById("resetBtn").onclick=()=>{
+  if(confirm("Удалить всех людей и вернуть пример по умолчанию?")){
+    data=seed(); document.getElementById("sunLabel").textContent=data.sunLabel;
+    persist(); syncOrbs(); renderPanel(); hide("settingsOverlay");
+  }
+};
+
+const panel=document.getElementById("panel");
+document.getElementById("togglePanel").onclick=()=>panel.classList.toggle("closed");
+
+/* ============================================================
+   СОХРАНЕНИЕ И СТАРТ
+   ============================================================ */
+let saveTimer=null;
+function persist(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>Store.save(data),250); }
+window.addEventListener("resize",layout);
+
+async function init(){
+  buildScene(); makeStars();
+  const loaded=await Store.load();
+  data=loaded||seed();
+  if(!data.groups) data.groups={};
+  document.getElementById("sunLabel").textContent=data.sunLabel||"Я";
+  syncOrbs(); renderPanel(); requestAnimationFrame(loop);
+  if(!loaded) persist();
+}
+init();
+</script>
+
+
+</body></html>
