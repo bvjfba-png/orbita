@@ -130,6 +130,8 @@ body{
 .field textarea{resize:vertical;min-height:70px}
 
 .swatches{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.size-pick{display:flex;align-items:center;gap:10px;width:100%}
+.size-pick .sw.auto{flex:0 0 auto}
 .sw{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;position:relative;transition:transform .12s ease}
 .sw:hover{transform:scale(1.1)}
 .sw.selected{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.15)}
@@ -263,6 +265,16 @@ body{
       </div>
     </div>
     <div class="field">
+      <label>Размер точки</label>
+      <div class="size-pick">
+        <button type="button" class="sw auto" id="fSizeAuto" data-s="auto">авто</button>
+        <div class="range-row" style="flex:1;margin:0">
+          <input id="fSize" type="range" min="6" max="64" value="24">
+          <span class="range-val" id="fSizeVal">авто</span>
+        </div>
+      </div>
+    </div>
+    <div class="field">
       <label>Заметка</label>
       <textarea id="fNote" placeholder="Что важно помнить про этого человека"></textarea>
     </div>
@@ -365,7 +377,7 @@ function saveData(d){
 /* ============================================================
    ДАННЫЕ
    data = { groups: {имя:1}, people: Person[], orbits: Orbit[] }
-   Person = { id, name, group, note, angle, dist, color, orbitId?, orbitDir? }
+   Person = { id, name, group, note, angle, dist, color: null|"#hex", size: null|px, orbitId?, orbitDir? }
    Orbit = { id, name, dist (0..1), width (px), color (#hex), opacity (0..1) }
    color = null → по близости; "#hex" → фиксированный
    ============================================================ */
@@ -448,8 +460,17 @@ function seed(){
   };
 }
 
-function mk(name, group, note, dist, angle, color=null){
-  return { id:uid(), name, group, note, dist, angle, color };
+function mk(name, group, note, dist, angle, color=null, size=null){
+  return { id:uid(), name, group, note, dist, angle, color, size };
+}
+
+function autoOrbSize(dist){
+  return 13 + (1 - dist) * 22;
+}
+
+function orbSize(p, dist){
+  if(p.size != null && p.size > 0) return p.size;
+  return autoOrbSize(dist);
 }
 
 function uid(){
@@ -728,7 +749,7 @@ const orbEls = new Map();
 let draggingId = null;
 
 function applyVisual(el, p, dist){
-  const size = 13 + (1 - dist) * 22;
+  const size = orbSize(p, dist);
   const glow = 0.125 + (1 - dist) * 0.35;
   el.style.width = el.style.height = size + "px";
   const c = coreColor(p, dist);
@@ -938,6 +959,7 @@ document.getElementById("cardDelete").onclick = () => {
 
 let editId = null;
 let formColor = null;
+let formSize = null;
 const swWrap = document.getElementById("fSwatches");
 const fColor = document.getElementById("fColor");
 
@@ -956,6 +978,36 @@ swWrap.addEventListener("click", e => {
 fColor.addEventListener("input", () => {
   formColor = fColor.value;
   setSelected(swWrap.querySelector(".custom"));
+});
+
+const fSize = document.getElementById("fSize");
+const fSizeVal = document.getElementById("fSizeVal");
+const fSizeAuto = document.getElementById("fSizeAuto");
+
+function updateSizeUi(){
+  const p = editId ? data.people.find(o => o.id === editId) : null;
+  const dist = p ? p.dist : 0.55;
+  const autoPx = Math.round(autoOrbSize(dist));
+  if(formSize == null){
+    fSizeAuto.classList.add("selected");
+    fSize.value = autoPx;
+    fSizeVal.textContent = "авто · " + autoPx + "px";
+  } else {
+    fSizeAuto.classList.remove("selected");
+    fSize.value = formSize;
+    fSizeVal.textContent = formSize + " px";
+  }
+}
+
+fSizeAuto.addEventListener("click", () => {
+  formSize = null;
+  updateSizeUi();
+});
+
+fSize.addEventListener("input", () => {
+  formSize = Math.max(6, Math.min(64, Number(fSize.value) || 24));
+  fSizeAuto.classList.remove("selected");
+  fSizeVal.textContent = formSize + " px";
 });
 
 function refreshGroupList(){
@@ -979,6 +1031,8 @@ function openForm(id){
     if(preset) setSelected(preset);
     else { fColor.value = formColor; setSelected(swWrap.querySelector(".custom")); }
   }
+  formSize = p && p.size != null ? p.size : null;
+  updateSizeUi();
   show("formOverlay");
   setTimeout(() => document.getElementById("fName").focus(), 60);
 }
@@ -997,8 +1051,9 @@ document.getElementById("formSave").onclick = () => {
     p.group = group;
     p.note = note;
     p.color = formColor;
+    p.size = formSize;
   } else {
-    data.people.push(mk(name, group, note, 0.55 + Math.random() * 0.1, Math.random() * Math.PI * 2, formColor));
+    data.people.push(mk(name, group, note, 0.55 + Math.random() * 0.1, Math.random() * Math.PI * 2, formColor, formSize));
   }
   persist();
   syncOrbs();
