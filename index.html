@@ -43,9 +43,6 @@ body{
 
 .ring{position:absolute;left:50%;top:50%;border-radius:50%;border-style:solid;
   transform:translate(-50%,-50%);pointer-events:none}
-.ring-label{position:absolute;top:-10px;left:50%;transform:translateX(-50%);
-  font-size:11px;color:var(--muted);white-space:nowrap;pointer-events:none;letter-spacing:.02em}
-
 #sun{position:absolute;left:0;top:0;width:60px;height:60px;border-radius:50%;
   transform:translate(-50%,-50%);cursor:pointer;z-index:5;
   background:radial-gradient(circle at 38% 34%, #fff7e6 0%, var(--sun-core) 34%, var(--sun-glow) 80%, #d9622a 100%);
@@ -313,7 +310,10 @@ body{
     </div>
     <div class="field">
       <label>Толщина линии (px)</label>
-      <input id="oWidth" type="number" min="1" max="12" value="1">
+      <div class="range-row">
+        <input id="oWidth" type="range" min="1" max="80" value="1">
+        <span class="range-val" id="oWidthVal">1 px</span>
+      </div>
     </div>
     <div class="field">
       <label>Цвет линии</label>
@@ -365,7 +365,7 @@ function saveData(d){
 /* ============================================================
    ДАННЫЕ
    data = { groups: {имя:1}, people: Person[], orbits: Orbit[] }
-   Person = { id, name, group, note, angle, dist, color: null|"#hex" }
+   Person = { id, name, group, note, angle, dist, color, orbitId?, orbitDir? }
    Orbit = { id, name, dist (0..1), width (px), color (#hex), opacity (0..1) }
    color = null → по близости; "#hex" → фиксированный
    ============================================================ */
@@ -503,6 +503,8 @@ const ZOOM_MAX = 2.4;
 const SUN_R = 30;
 const MIN_GAP = 24;
 const SPACE_SCALE = 3;
+const ORBIT_SNAP = 0.028;
+const ORBIT_ROT_SPEED = 0.22;
 let ringEls = new Map();
 
 function layout(){
@@ -574,6 +576,29 @@ function distOf(rpx){
   return Math.max(0, Math.min(1, (rpx - minR) / (maxR - minR)));
 }
 
+function findSnapOrbit(dist){
+  let best = null, bestD = Infinity;
+  for(const o of data.orbits){
+    const d = Math.abs(o.dist - dist);
+    if(d < bestD){ bestD = d; best = o; }
+  }
+  return best && bestD <= ORBIT_SNAP ? best : null;
+}
+
+function attachToOrbit(p, orbit){
+  p.dist = orbit.dist;
+  p.orbitId = orbit.id;
+  if(p.orbitDir == null) p.orbitDir = Math.random() > 0.5 ? 1 : -1;
+}
+
+function detachFromOrbit(p){
+  p.orbitId = null;
+}
+
+function clearOrbitFromPeople(orbitId){
+  data.people.forEach(p => { if(p.orbitId === orbitId) detachFromOrbit(p); });
+}
+
 function makeStars(){
   const span = SPACE_SCALE;
   stars.style.width = (span * 100) + "%";
@@ -612,7 +637,6 @@ function syncRings(){
     if(!el){
       el = document.createElement("div");
       el.className = "ring";
-      el.innerHTML = `<span class="ring-label"></span>`;
       world.appendChild(el);
       ringEls.set(o.id, el);
     }
@@ -620,7 +644,6 @@ function syncRings(){
     el.style.width = el.style.height = rad + "px";
     el.style.borderWidth = (o.width || 1) + "px";
     el.style.borderColor = orbitStrokeColor(o);
-    el.querySelector(".ring-label").textContent = o.name || "";
     el.style.left = cx + "px";
     el.style.top = cy + "px";
   });
@@ -746,17 +769,36 @@ function syncOrbs(){
 
 let t0 = performance.now();
 
+let lastFrame = performance.now();
 function loop(now){
+  const dt = Math.min(0.05, (now - lastFrame) / 1000);
+  lastFrame = now;
   const t = (now - t0) / 1000;
   data.people.forEach(p => {
     const el = orbEls.get(p.id);
     if(!el || p.id === draggingId) return;
-    const d = el._drift;
-    const pos = worldPos(p.angle, p.dist);
-    const bx = pos.x;
-    const by = pos.y;
-    const dx = Math.sin(t * d.sx + d.px) * d.ax;
-    const dy = Math.cos(t * d.sy + d.py) * d.ay;
+
+    let bx, by, dx = 0, dy = 0;
+    const orbit = p.orbitId ? data.orbits.find(o => o.id === p.orbitId) : null;
+    if(orbit && Math.abs(p.dist - orbit.dist) <= ORBIT_SNAP * 1.5){
+      p.dist = orbit.dist;
+      p.angle += ORBIT_ROT_SPEED * (p.orbitDir || 1) * dt;
+      const pos = worldPos(p.angle, p.dist);
+      bx = pos.x;
+      by = pos.y;
+    } else {
+      if(p.orbitId) detachFromOrbit(p);
+      const snap = findSnapOrbit(p.dist);
+      if(snap){ attachToOrbit(p, snap); const pos = worldPos(p.angle, p.dist); bx = pos.x; by = pos.y; }
+      else {
+        const d = el._drift;
+        const pos = worldPos(p.angle, p.dist);
+        bx = pos.x;
+        by = pos.y;
+        dx = Math.sin(t * d.sx + d.px) * d.ax;
+        dy = Math.cos(t * d.sy + d.py) * d.ay;
+      }
+    }
     el.style.transform = `translate(${bx + dx}px, ${by + dy}px) translate(-50%,-50%)`;
   });
   requestAnimationFrame(loop);
@@ -779,7 +821,9 @@ function attachDrag(el, id){
   el.addEventListener("pointermove", e => {
     if(!active) return;
     if(Math.hypot(e.clientX - sx, e.clientY - sy) > 4) moved = true;
-    const { ang, r, dist } = pointerToPolar(e.clientX, e.clientY);
+    let { ang, r, dist } = pointerToPolar(e.clientX, e.clientY);
+    const snap = findSnapOrbit(dist);
+    if(snap){ dist = snap.dist; r = radiusOf(dist); }
     const px = cx + Math.cos(ang) * r;
     const py = cy + Math.sin(ang) * r;
     el.style.transform = `translate(${px}px, ${py}px) translate(-50%,-50%)`;
@@ -796,6 +840,9 @@ function attachDrag(el, id){
       const { ang, dist } = pointerToPolar(e.clientX, e.clientY);
       p.angle = ang;
       p.dist = dist;
+      const snap = findSnapOrbit(dist);
+      if(snap) attachToOrbit(p, snap);
+      else detachFromOrbit(p);
       persist();
       renderPanel();
     } else {
@@ -1002,6 +1049,9 @@ oDist.addEventListener("input", () => { oDistVal.textContent = oDist.value + "%"
 const oOpacity = document.getElementById("oOpacity");
 const oOpacityVal = document.getElementById("oOpacityVal");
 oOpacity.addEventListener("input", () => { oOpacityVal.textContent = oOpacity.value + "%"; });
+const oWidth = document.getElementById("oWidth");
+const oWidthVal = document.getElementById("oWidthVal");
+oWidth.addEventListener("input", () => { oWidthVal.textContent = oWidth.value + " px"; });
 
 function openOrbitForm(id){
   editOrbitId = id || null;
@@ -1010,7 +1060,9 @@ function openOrbitForm(id){
   document.getElementById("oName").value = o ? o.name : "";
   oDist.value = Math.round((o ? o.dist : 0.5) * 100);
   oDistVal.textContent = oDist.value + "%";
-  document.getElementById("oWidth").value = o ? (o.width || 1) : 1;
+  const w = o ? (o.width || 1) : 1;
+  document.getElementById("oWidth").value = w;
+  document.getElementById("oWidthVal").textContent = w + " px";
   document.getElementById("oColor").value = o ? orbitHex(o) : "#ffffff";
   const opPct = Math.round((o ? orbitOpacity(o) : 0.35) * 100);
   document.getElementById("oOpacity").value = opPct;
@@ -1030,7 +1082,7 @@ document.getElementById("orbitSave").onclick = () => {
   const name = document.getElementById("oName").value.trim();
   if(!name){ document.getElementById("oName").focus(); return; }
   const dist = Math.max(0.05, Math.min(1, Number(oDist.value) / 100));
-  const width = Math.max(1, Math.min(12, Number(document.getElementById("oWidth").value) || 1));
+  const width = Math.max(1, Math.min(80, Number(document.getElementById("oWidth").value) || 1));
   const color = document.getElementById("oColor").value;
   const opacity = Math.max(0, Math.min(1, Number(document.getElementById("oOpacity").value) / 100));
   if(editOrbitId){
@@ -1039,11 +1091,17 @@ document.getElementById("orbitSave").onclick = () => {
   } else {
     data.orbits.push({ id: uid(), name, dist, width, color, opacity });
   }
+  if(editOrbitId){
+    data.people.forEach(p => {
+      if(p.orbitId === editOrbitId) p.dist = dist;
+    });
+  }
   persist(); syncRings(); renderOrbitList(); hide("orbitOverlay");
 };
 document.getElementById("orbitDelete").onclick = () => {
   if(!editOrbitId) return;
   if(confirm("Удалить эту орбиту?")){
+    clearOrbitFromPeople(editOrbitId);
     data.orbits = data.orbits.filter(o => o.id !== editOrbitId);
     persist(); syncRings(); renderOrbitList(); hide("orbitOverlay");
   }
