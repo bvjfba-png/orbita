@@ -319,6 +319,13 @@ body{
       <label>Цвет линии</label>
       <input id="oColor" type="color" value="#ffffff">
     </div>
+    <div class="field">
+      <label>Непрозрачность линии</label>
+      <div class="range-row">
+        <input id="oOpacity" type="range" min="0" max="100" value="35">
+        <span class="range-val" id="oOpacityVal">35%</span>
+      </div>
+    </div>
     <div class="modal-actions">
       <button type="button" class="primary" id="orbitSave">Сохранить</button>
       <button type="button" id="orbitCancel">Отмена</button>
@@ -359,23 +366,68 @@ function saveData(d){
    ДАННЫЕ
    data = { groups: {имя:1}, people: Person[], orbits: Orbit[] }
    Person = { id, name, group, note, angle, dist, color: null|"#hex" }
-   Orbit = { id, name, dist (0..1), width (px), color }
+   Orbit = { id, name, dist (0..1), width (px), color (#hex), opacity (0..1) }
    color = null → по близости; "#hex" → фиксированный
    ============================================================ */
 let data = { groups:{}, people:[], orbits:[] };
 
 function defaultOrbits(){
   return [
-    { id:uid(), name:"Близко", dist:0.28, width:1, color:"rgba(255,255,255,0.07)" },
-    { id:uid(), name:"Средняя дистанция", dist:0.55, width:1, color:"rgba(255,255,255,0.05)" },
-    { id:uid(), name:"Далеко", dist:0.88, width:1, color:"rgba(255,255,255,0.04)" }
+    { id:uid(), name:"Близко", dist:0.28, width:1, color:"#ffffff", opacity:0.07 },
+    { id:uid(), name:"Средняя дистанция", dist:0.55, width:1, color:"#ffffff", opacity:0.05 },
+    { id:uid(), name:"Далеко", dist:0.88, width:1, color:"#ffffff", opacity:0.04 }
   ];
+}
+
+function parseOrbitColor(color){
+  if(!color) return { hex:"#ffffff", opacity:0.06 };
+  if(color.startsWith("#")) return { hex: color.length === 4 ? expandHex(color) : color, opacity:1 };
+  const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
+  if(m){
+    const hex = "#" + [m[1],m[2],m[3]].map(n => (+n).toString(16).padStart(2,"0")).join("");
+    return { hex, opacity: m[4] !== undefined ? +m[4] : 1 };
+  }
+  return { hex:"#ffffff", opacity:0.06 };
+}
+
+function expandHex(hex){
+  hex = hex.replace("#","");
+  if(hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  return "#" + hex;
+}
+
+function orbitOpacity(o){
+  if(o.opacity != null) return Math.max(0, Math.min(1, o.opacity));
+  return parseOrbitColor(o.color).opacity;
+}
+
+function orbitHex(o){
+  if(o.color && o.color.startsWith("#")) return expandHex(o.color);
+  return parseOrbitColor(o.color).hex;
+}
+
+function orbitStrokeColor(o){
+  return hexA(orbitHex(o), orbitOpacity(o));
+}
+
+function normalizeOrbits(orbits){
+  orbits.forEach(o => {
+    const hadRgba = o.color && String(o.color).includes("rgba");
+    if(o.opacity == null || hadRgba){
+      const p = parseOrbitColor(o.color);
+      o.color = orbitHex({ color: p.hex });
+      if(o.opacity == null) o.opacity = hadRgba ? p.opacity : 0.35;
+    }
+    if(!o.color || !o.color.startsWith("#")) o.color = "#ffffff";
+    o.opacity = Math.max(0, Math.min(1, o.opacity));
+  });
 }
 
 function migrateData(d){
   if(!d.groups) d.groups = {};
   if(!d.people) d.people = [];
   if(!d.orbits || !d.orbits.length) d.orbits = defaultOrbits();
+  normalizeOrbits(d.orbits);
   if(!d.view) d.view = { zoom: 1, panX: 0, panY: 0 };
   delete d.sunLabel;
   return d;
@@ -567,7 +619,7 @@ function syncRings(){
     const rad = radiusOf(o.dist) * 2;
     el.style.width = el.style.height = rad + "px";
     el.style.borderWidth = (o.width || 1) + "px";
-    el.style.borderColor = o.color || "rgba(255,255,255,0.06)";
+    el.style.borderColor = orbitStrokeColor(o);
     el.querySelector(".ring-label").textContent = o.name || "";
     el.style.left = cx + "px";
     el.style.top = cy + "px";
@@ -947,6 +999,9 @@ let editOrbitId = null;
 const oDist = document.getElementById("oDist");
 const oDistVal = document.getElementById("oDistVal");
 oDist.addEventListener("input", () => { oDistVal.textContent = oDist.value + "%"; });
+const oOpacity = document.getElementById("oOpacity");
+const oOpacityVal = document.getElementById("oOpacityVal");
+oOpacity.addEventListener("input", () => { oOpacityVal.textContent = oOpacity.value + "%"; });
 
 function openOrbitForm(id){
   editOrbitId = id || null;
@@ -956,7 +1011,10 @@ function openOrbitForm(id){
   oDist.value = Math.round((o ? o.dist : 0.5) * 100);
   oDistVal.textContent = oDist.value + "%";
   document.getElementById("oWidth").value = o ? (o.width || 1) : 1;
-  document.getElementById("oColor").value = o && o.color && o.color.startsWith("#") ? o.color : "#ffffff";
+  document.getElementById("oColor").value = o ? orbitHex(o) : "#ffffff";
+  const opPct = Math.round((o ? orbitOpacity(o) : 0.35) * 100);
+  document.getElementById("oOpacity").value = opPct;
+  document.getElementById("oOpacityVal").textContent = opPct + "%";
   document.getElementById("orbitDelete").style.display = o ? "inline" : "none";
   show("orbitOverlay");
   setTimeout(() => document.getElementById("oName").focus(), 60);
@@ -974,11 +1032,12 @@ document.getElementById("orbitSave").onclick = () => {
   const dist = Math.max(0.05, Math.min(1, Number(oDist.value) / 100));
   const width = Math.max(1, Math.min(12, Number(document.getElementById("oWidth").value) || 1));
   const color = document.getElementById("oColor").value;
+  const opacity = Math.max(0, Math.min(1, Number(document.getElementById("oOpacity").value) / 100));
   if(editOrbitId){
     const o = data.orbits.find(x => x.id === editOrbitId);
-    o.name = name; o.dist = dist; o.width = width; o.color = color;
+    o.name = name; o.dist = dist; o.width = width; o.color = color; o.opacity = opacity;
   } else {
-    data.orbits.push({ id: uid(), name, dist, width, color });
+    data.orbits.push({ id: uid(), name, dist, width, color, opacity });
   }
   persist(); syncRings(); renderOrbitList(); hide("orbitOverlay");
 };
