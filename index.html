@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Орбита</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600&family=Golos+Text:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#070512;
+  --bg-1:#0f0b22;
+  --bg-warm:#1f1230;
+  --sun-core:#ffe6b0;
+  --sun-glow:#ff9d4d;
+  --text:#ece8f4;
+  --muted:#948da8;
+  --panel:rgba(16,12,28,.66);
+  --panel-solid:#15102a;
+  --border:rgba(255,255,255,.08);
+  --border-strong:rgba(255,255,255,.15);
+  --ring:rgba(255,255,255,.045);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:"Golos Text",system-ui,sans-serif;
+  color:var(--text);
+  background:radial-gradient(120% 90% at 50% 46%, var(--bg-warm) 0%, var(--bg-1) 40%, var(--bg-0) 100%);
+  -webkit-font-smoothing:antialiased;
+  user-select:none;
+}
+
+/* ---------- космос ---------- */
+#space{position:fixed;inset:0;overflow:hidden;touch-action:none}
+#stars{position:absolute;inset:0;pointer-events:none}
+.star{position:absolute;border-radius:50%;background:#fff;opacity:.5;
+  animation:twinkle var(--tw,5s) ease-in-out infinite alternate}
+@keyframes twinkle{from{opacity:.12}to{opacity:.6}}
+
+.ring{position:absolute;left:50%;top:50%;border-radius:50%;
+  border:1px solid var(--ring);transform:translate(-50%,-50%);pointer-events:none}
+
+#sun{position:absolute;left:50%;top:50%;width:60px;height:60px;border-radius:50%;
+  transform:translate(-50%,-50%);cursor:pointer;z-index:5;
+  background:radial-gradient(circle at 38% 34%, #fff7e6 0%, var(--sun-core) 34%, var(--sun-glow) 80%, #d9622a 100%);
+  box-shadow:0 0 12px 3px rgba(255,180,90,.5),0 0 50px 14px rgba(255,140,60,.3),0 0 100px 40px rgba(255,120,40,.14);
+  display:flex;align-items:center;justify-content:center;animation:pulse 7s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 12px 3px rgba(255,180,90,.5),0 0 50px 14px rgba(255,140,60,.3),0 0 100px 40px rgba(255,120,40,.14)}
+  50%{box-shadow:0 0 16px 5px rgba(255,190,110,.6),0 0 64px 20px rgba(255,150,70,.36),0 0 124px 52px rgba(255,120,40,.18)}}
+#sunLabel{font-family:"Cormorant Garamond",serif;font-size:23px;font-weight:600;color:#3a1d05;
+  font-style:italic;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.3)}
+
+.orb{position:absolute;left:0;top:0;border-radius:50%;cursor:grab;z-index:4;will-change:transform;
+  transition:box-shadow .2s ease, filter .25s ease}
+.orb:active{cursor:grabbing}
+.orb .core{width:100%;height:100%;border-radius:50%}
+.orb .name{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  font-size:12px;color:var(--muted);white-space:nowrap;opacity:0;transition:opacity .25s ease;
+  pointer-events:none;text-shadow:0 0 8px rgba(0,0,0,.85)}
+.orb:hover .name{opacity:1}
+.orb.dim{filter:saturate(.3) brightness(.5);opacity:.35}
+.orb.flash{animation:flash .9s ease}
+@keyframes flash{40%{filter:brightness(1.9)}}
+
+/* ---------- интерфейс ---------- */
+.brand{position:fixed;top:22px;left:26px;z-index:20;pointer-events:none}
+.brand h1{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:32px;letter-spacing:.04em;line-height:1}
+.brand p{font-size:12.5px;color:var(--muted);margin-top:4px;max-width:210px;line-height:1.45}
+
+#panel{position:fixed;top:0;right:0;height:100%;width:300px;z-index:30;
+  background:var(--panel);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border-left:1px solid var(--border);display:flex;flex-direction:column;
+  transition:transform .35s cubic-bezier(.4,0,.2,1)}
+#panel.closed{transform:translateX(100%)}
+.panel-head{padding:22px 20px 14px;border-bottom:1px solid var(--border)}
+.search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);
+  border:1px solid var(--border);border-radius:12px;padding:9px 12px;margin-bottom:12px}
+.search input{background:none;border:none;outline:none;color:var(--text);font-size:14px;width:100%;font-family:inherit}
+.search input::placeholder{color:var(--muted)}
+.search svg{flex:0 0 auto;opacity:.55}
+.btn-add{width:100%;border:none;border-radius:12px;padding:11px;font-family:inherit;font-size:14px;
+  font-weight:500;cursor:pointer;color:#1a1208;
+  background:linear-gradient(135deg,var(--sun-core),var(--sun-glow));
+  box-shadow:0 4px 16px rgba(255,150,70,.26);transition:transform .15s ease,box-shadow .2s ease}
+.btn-add:hover{transform:translateY(-1px)}
+.btn-add:active{transform:translateY(0)}
+
+.list{flex:1;overflow-y:auto;padding:10px 10px 24px}
+.list::-webkit-scrollbar{width:8px}
+.list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:8px}
+.row{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:11px;cursor:pointer;transition:background .15s ease}
+.row:hover{background:rgba(255,255,255,.05)}
+.row .dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.row .meta{min-width:0;flex:1}
+.row .nm{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{color:var(--muted);font-size:13.5px;text-align:center;padding:34px 18px;line-height:1.5}
+
+.fab{position:fixed;z-index:31;width:44px;height:44px;border-radius:50%;border:1px solid var(--border-strong);
+  background:var(--panel);backdrop-filter:blur(18px);color:var(--text);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .2s ease}
+.fab:hover{background:rgba(255,255,255,.1)}
+#togglePanel{top:22px;right:24px}
+#gearBtn{bottom:22px;left:24px}
+
+.hint{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:20;
+  display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);pointer-events:none;
+  background:var(--panel);backdrop-filter:blur(14px);padding:7px 16px;border-radius:30px;border:1px solid var(--border)}
+.hint .bar{width:120px;height:5px;border-radius:3px;background:linear-gradient(90deg,#ff9d4d,#6ca8ff)}
+
+/* ---------- модалки ---------- */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(4,2,10,.55);backdrop-filter:blur(3px);
+  display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .22s ease}
+.overlay.open{opacity:1;pointer-events:auto}
+.modal{width:100%;max-width:380px;background:var(--panel-solid);border:1px solid var(--border-strong);
+  border-radius:20px;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.6);
+  transform:translateY(12px) scale(.98);transition:transform .22s ease}
+.overlay.open .modal{transform:translateY(0) scale(1)}
+.modal h2{font-family:"Cormorant Garamond",serif;font-size:26px;font-weight:600;margin-bottom:4px}
+.modal .card-group{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);margin-bottom:16px}
+.modal .card-group .dot{width:9px;height:9px;border-radius:50%}
+.modal .note{font-size:14.5px;line-height:1.55;color:#cfc9dd;white-space:pre-wrap;margin-bottom:20px;min-height:20px}
+.modal .note.empty-note{color:var(--muted);font-style:italic}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.field input[type=text],.field textarea{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:11px;padding:11px 13px;color:var(--text);font-family:inherit;font-size:14.5px;outline:none;transition:border-color .18s ease}
+.field input[type=text]:focus,.field textarea:focus{border-color:var(--sun-glow)}
+.field textarea{resize:vertical;min-height:70px}
+
+.swatches{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;position:relative;transition:transform .12s ease}
+.sw:hover{transform:scale(1.1)}
+.sw.selected{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.15)}
+.sw.auto{width:auto;height:30px;border-radius:15px;padding:0 13px;font-family:inherit;font-size:12.5px;color:var(--text);
+  background:linear-gradient(90deg,#ff9d4d,#6ca8ff)}
+.sw.custom{overflow:hidden;background:conic-gradient(from 0deg,#ff6b6b,#ffd166,#8be9a3,#6ca8ff,#b69cff,#ff8fab,#ff6b6b)}
+.sw.custom input{position:absolute;inset:-4px;width:140%;height:140%;border:none;background:none;cursor:pointer;opacity:0}
+
+.modal-actions{display:flex;gap:10px;margin-top:8px}
+.modal-actions button{flex:1;padding:11px;border-radius:11px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;
+  border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);transition:background .15s ease}
+.modal-actions button:hover{background:rgba(255,255,255,.1)}
+.modal-actions .primary{border:none;color:#1a1208;background:linear-gradient(135deg,var(--sun-core),var(--sun-glow))}
+.modal-actions .danger{color:#ff9a9a;border-color:rgba(255,120,120,.3)}
+.modal-actions .danger:hover{background:rgba(255,80,80,.12)}
+.linkbtn{background:none;border:none;color:var(--muted);font-family:inherit;font-size:13px;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;padding:4px}
+.linkbtn:hover{color:var(--text)}
+
+@media(max-width:640px){
+  #panel{width:100%;max-width:330px}
+  .brand{top:18px;left:18px}
+  .brand h1{font-size:27px}
+  .hint{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="space">
+  <div id="stars"></div>
+</div>
+
+<div class="brand">
+  <h1>Орбита</h1>
+  <p>Чем ближе к центру — тем теплее связь. Тяни точки, цвет меняется вместе с дистанцией.</p>
+</div>
+
+<button class="fab" id="togglePanel" title="Список" type="button">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
+</button>
+<button class="fab" id="gearBtn" title="Настройки" type="button">
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+</button>
+
+<div class="hint"><span>ближе</span><span class="bar"></span><span>дальше</span></div>
+
+<aside id="panel">
+  <div class="panel-head">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg>
+      <input id="searchInput" type="text" placeholder="Поиск по имени…">
+    </div>
+    <button class="btn-add" id="addBtn" type="button">+ Добавить человека</button>
+  </div>
+  <div class="list" id="list"></div>
+</aside>
+
+<div class="overlay" id="cardOverlay">
+  <div class="modal">
+    <h2 id="cardName"></h2>
+    <div class="card-group"><span class="dot" id="cardDot"></span><span id="cardGroup"></span></div>
+    <div class="note" id="cardNote"></div>
+    <div class="modal-actions">
+      <button type="button" id="cardEdit">Изменить</button>
+      <button type="button" class="danger" id="cardDelete">Удалить</button>
+    </div>
+    <div style="text-align:center;margin-top:10px"><button type="button" class="linkbtn" id="cardClose">Закрыть</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="formOverlay">
+  <div class="modal">
+    <h2 id="formTitle">Новый человек</h2>
+    <div style="height:14px"></div>
+    <div class="field">
+      <label>Имя</label>
+      <input id="fName" type="text" placeholder="Как зовут">
+    </div>
+    <div class="field">
+      <label>Группа</label>
+      <input id="fGroup" type="text" list="groupList" placeholder="Например: Друзья">
+      <datalist id="groupList"></datalist>
+    </div>
+    <div class="field">
+      <label>Цвет точки</label>
+      <div class="swatches" id="fSwatches">
+        <button type="button" class="sw auto" data-c="auto" title="Цвет по близости">авто</button>
+        <button type="button" class="sw" data-c="#f4a259" style="background:#f4a259"></button>
+        <button type="button" class="sw" data-c="#5fd0b4" style="background:#5fd0b4"></button>
+        <button type="button" class="sw" data-c="#6ca8ff" style="background:#6ca8ff"></button>
+        <button type="button" class="sw" data-c="#b69cff" style="background:#b69cff"></button>
+        <button type="button" class="sw" data-c="#ff8fab" style="background:#ff8fab"></button>
+        <label class="sw custom" title="Свой цвет"><input id="fColor" type="color" value="#ffd166"></label>
+      </div>
+    </div>
+    <div class="field">
+      <label>Заметка</label>
+      <textarea id="fNote" placeholder="Что важно помнить про этого человека"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="primary" id="formSave">Сохранить</button>
+      <button type="button" id="formCancel">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <h2>Настройки</h2>
+    <div style="height:16px"></div>
+    <div class="field">
+      <label>Подпись в центре (это ты)</label>
+      <input id="sLabel" type="text" maxlength="3" placeholder="Я">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="primary" id="settingsSave">Сохранить</button>
+      <button type="button" id="settingsCancel">Отмена</button>
+    </div>
+    <div style="text-align:center;margin-top:14px">
+      <button type="button" class="linkbtn" id="resetBtn" style="color:#ff9a9a">Сбросить все данные</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   ХРАНИЛИЩЕ — localStorage, ключ orbita.data.v2
+   ============================================================ */
+const STORAGE_KEY = "orbita.data.v2";
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){
+    console.warn("load", e);
+    return null;
+  }
+}
+
+function saveData(d){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+  }catch(e){
+    console.warn("save", e);
+  }
+}
+
+/* ============================================================
+   ДАННЫЕ
+   data = { sunLabel, groups: {имя:1}, people: Person[] }
+   Person = { id, name, group, note, angle, dist, color: null|"#hex" }
+   color = null → по близости; "#hex" → фиксированный
+   ============================================================ */
+let data = { sunLabel:"Я", groups:{}, people:[] };
+
+function seed(){
+  return {
+    sunLabel:"Я",
+    groups:{ "Близкий круг":1, "Друзья":1, "Тёплые знакомые":1, "Другой вайб":1 },
+    people:[
+      mk("Аня","Близкий круг","Знаю со школы. Можно звонить в любое время.",0.16,-1.1),
+      mk("Макс","Близкий круг","Понимает без слов.",0.22,2.4),
+      mk("Лена","Друзья","Вместе ходим на скалодром.",0.46,0.4),
+      mk("Дима","Друзья","Давно не виделись — стоит написать.",0.5,3.6),
+      mk("Костя","Тёплые знакомые","Коллега, приятно общаться.",0.72,1.7),
+      mk("Соня","Другой вайб","Другой ритм жизни, но цепляет.",0.82,-2.3)
+    ]
+  };
+}
+
+function mk(name, group, note, dist, angle, color=null){
+  return { id:uid(), name, group, note, dist, angle, color };
+}
+
+function uid(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function registerGroup(name){
+  if(name && !(name in data.groups)) data.groups[name] = 1;
+}
+
+/* цвет по близости: hue 34°→215°, s ~92%→70%, l ~64%→58% */
+function autoHsl(dist){
+  const h = 34 + (215 - 34) * dist;
+  const s = 92 - 22 * dist;
+  const l = 64 - 6 * dist;
+  return { h, s, l };
+}
+
+function coreColor(p, dist){
+  if(p.color) return p.color;
+  const c = autoHsl(dist);
+  return `hsl(${c.h.toFixed(0)} ${c.s.toFixed(0)}% ${c.l.toFixed(0)}%)`;
+}
+
+function glowColor(p, dist, a){
+  if(p.color) return hexA(p.color, a);
+  const c = autoHsl(dist);
+  return `hsla(${c.h.toFixed(0)},${c.s.toFixed(0)}%,${c.l.toFixed(0)}%,${a})`;
+}
+
+function hexA(hex, a){
+  hex = hex.replace("#", "");
+  if(hex.length === 3) hex = hex.split("").map(x => x + x).join("");
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* ============================================================
+   ГЕОМЕТРИЯ — центр, радиусы, звёзды, кольца, солнце
+   ============================================================ */
+const space = document.getElementById("space");
+const stars = document.getElementById("stars");
+let cx = 0, cy = 0, maxR = 0;
+const SUN_R = 30;
+const MIN_GAP = 24;
+let rings = [];
+
+function layout(){
+  cx = space.clientWidth / 2;
+  cy = space.clientHeight / 2;
+  maxR = Math.min(cx, cy) - 60;
+  rings.forEach((r, i) => {
+    const rad = (SUN_R + MIN_GAP) + (maxR - (SUN_R + MIN_GAP)) * ((i + 1) / rings.length);
+    r.style.width = r.style.height = (rad * 2) + "px";
+  });
+}
+
+function radiusOf(dist){
+  const minR = SUN_R + MIN_GAP;
+  return minR + dist * (maxR - minR);
+}
+
+function distOf(rpx){
+  const minR = SUN_R + MIN_GAP;
+  return Math.max(0, Math.min(1, (rpx - minR) / (maxR - minR)));
+}
+
+function makeStars(){
+  const n = Math.min(90, Math.floor(window.innerWidth * window.innerHeight / 16000));
+  let h = "";
+  for(let i = 0; i < n; i++){
+    const x = Math.random() * 100;
+    const y = Math.random() * 100;
+    const s = (Math.random() * 1.5 + 0.5).toFixed(2);
+    const tw = (Math.random() * 6 + 3).toFixed(1);
+    h += `<div class="star" style="left:${x}%;top:${y}%;width:${s}px;height:${s}px;--tw:${tw}s;animation-delay:${(Math.random() * 4).toFixed(1)}s"></div>`;
+  }
+  stars.innerHTML = h;
+}
+
+function buildScene(){
+  for(let i = 0; i < 3; i++){
+    const r = document.createElement("div");
+    r.className = "ring";
+    space.appendChild(r);
+    rings.push(r);
+  }
+  const sun = document.createElement("div");
+  sun.id = "sun";
+  sun.innerHTML = `<span id="sunLabel"></span>`;
+  sun.addEventListener("click", openSettings);
+  space.appendChild(sun);
+  layout();
+}
+
+/* ============================================================
+   ОРБЫ — отрисовка, дрейф, перетаскивание
+   ============================================================ */
+const orbEls = new Map();
+let draggingId = null;
+
+function applyVisual(el, p, dist){
+  const size = 13 + (1 - dist) * 22;
+  const glow = 0.25 + (1 - dist) * 0.7;
+  el.style.width = el.style.height = size + "px";
+  const c = coreColor(p, dist);
+  el.querySelector(".core").style.background =
+    `radial-gradient(circle at 36% 32%, #fff 0%, ${c} 62%, ${c} 100%)`;
+  el.style.boxShadow = `0 0 ${8 + (1 - dist) * 16}px ${1 + (1 - dist) * 3}px ${glowColor(p, dist, glow)}`;
+}
+
+function syncOrbs(){
+  for(const [id, el] of orbEls){
+    if(!data.people.find(p => p.id === id)){
+      el.remove();
+      orbEls.delete(id);
+    }
+  }
+  data.people.forEach(p => {
+    let el = orbEls.get(p.id);
+    if(!el){
+      el = document.createElement("div");
+      el.className = "orb";
+      el.innerHTML = `<div class="core"></div><span class="name"></span>`;
+      el._drift = {
+        ax: Math.random() * 6 + 5,
+        ay: Math.random() * 6 + 5,
+        sx: Math.random() * 0.5 + 0.25,
+        sy: Math.random() * 0.5 + 0.25,
+        px: Math.random() * Math.PI * 2,
+        py: Math.random() * Math.PI * 2
+      };
+      attachDrag(el, p.id);
+      space.appendChild(el);
+      orbEls.set(p.id, el);
+    }
+    applyVisual(el, p, p.dist);
+    el.querySelector(".name").textContent = p.name;
+  });
+}
+
+let t0 = performance.now();
+
+function loop(now){
+  const t = (now - t0) / 1000;
+  data.people.forEach(p => {
+    const el = orbEls.get(p.id);
+    if(!el || p.id === draggingId) return;
+    const d = el._drift;
+    const r = radiusOf(p.dist);
+    const bx = cx + Math.cos(p.angle) * r;
+    const by = cy + Math.sin(p.angle) * r;
+    const dx = Math.sin(t * d.sx + d.px) * d.ax;
+    const dy = Math.cos(t * d.sy + d.py) * d.ay;
+    el.style.transform = `translate(${bx + dx}px, ${by + dy}px) translate(-50%,-50%)`;
+  });
+  requestAnimationFrame(loop);
+}
+
+function attachDrag(el, id){
+  let sx, sy, moved, active = false;
+
+  el.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    active = true;
+    moved = false;
+    draggingId = id;
+    sx = e.clientX;
+    sy = e.clientY;
+    el.setPointerCapture(e.pointerId);
+    el.style.zIndex = 9;
+  });
+
+  el.addEventListener("pointermove", e => {
+    if(!active) return;
+    if(Math.hypot(e.clientX - sx, e.clientY - sy) > 4) moved = true;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const ang = Math.atan2(dy, dx);
+    let r = Math.max(SUN_R + MIN_GAP, Math.min(maxR, Math.hypot(dx, dy)));
+    const px = cx + Math.cos(ang) * r;
+    const py = cy + Math.sin(ang) * r;
+    el.style.transform = `translate(${px}px, ${py}px) translate(-50%,-50%)`;
+    const p = data.people.find(o => o.id === id);
+    applyVisual(el, p, distOf(r));
+  });
+
+  el.addEventListener("pointerup", e => {
+    if(!active) return;
+    active = false;
+    el.style.zIndex = 4;
+    const p = data.people.find(o => o.id === id);
+    if(moved){
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      let r = Math.max(SUN_R + MIN_GAP, Math.min(maxR, Math.hypot(dx, dy)));
+      p.angle = Math.atan2(dy, dx);
+      p.dist = distOf(r);
+      persist();
+      renderPanel();
+    } else {
+      openCard(id);
+    }
+    draggingId = null;
+  });
+}
+
+/* ============================================================
+   ПАНЕЛЬ — поиск, список по близости
+   ============================================================ */
+const listEl = document.getElementById("list");
+const searchInput = document.getElementById("searchInput");
+
+function esc(s){
+  return (s || "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+}
+
+function renderPanel(){
+  const q = searchInput.value.trim().toLowerCase();
+  const people = [...data.people].sort((a, b) => a.dist - b.dist);
+  const shown = people.filter(p => !q || p.name.toLowerCase().includes(q));
+
+  if(data.people.length === 0){
+    listEl.innerHTML = `<div class="empty">Пока пусто.<br>Нажми «+ Добавить человека», чтобы поместить первую точку на орбиту.</div>`;
+  } else if(shown.length === 0){
+    listEl.innerHTML = `<div class="empty">Никого не нашлось по запросу «${esc(q)}».</div>`;
+  } else {
+    listEl.innerHTML = shown.map(p => `
+      <div class="row" data-id="${p.id}">
+        <span class="dot" style="background:${coreColor(p, p.dist)}"></span>
+        <span class="meta"><div class="nm">${esc(p.name)}</div><div class="sub">${esc(p.group)}</div></span>
+      </div>`).join("");
+  }
+
+  orbEls.forEach((el, id) => {
+    const p = data.people.find(o => o.id === id);
+    el.classList.toggle("dim", q && p && !p.name.toLowerCase().includes(q));
+  });
+}
+
+listEl.addEventListener("click", e => {
+  const row = e.target.closest(".row");
+  if(!row) return;
+  const el = orbEls.get(row.dataset.id);
+  if(el){
+    el.classList.remove("flash");
+    void el.offsetWidth;
+    el.classList.add("flash");
+  }
+  openCard(row.dataset.id);
+});
+
+searchInput.addEventListener("input", renderPanel);
+
+/* ============================================================
+   МОДАЛКИ — карточка, форма, настройки
+   ============================================================ */
+function show(id){ document.getElementById(id).classList.add("open"); }
+function hide(id){ document.getElementById(id).classList.remove("open"); }
+
+document.querySelectorAll(".overlay").forEach(o => {
+  o.addEventListener("click", e => { if(e.target === o) o.classList.remove("open"); });
+});
+
+let currentId = null;
+
+function openCard(id){
+  const p = data.people.find(o => o.id === id);
+  if(!p) return;
+  currentId = id;
+  document.getElementById("cardName").textContent = p.name;
+  document.getElementById("cardGroup").textContent = p.group;
+  document.getElementById("cardDot").style.background = coreColor(p, p.dist);
+  const note = document.getElementById("cardNote");
+  note.textContent = p.note || "Без заметки";
+  note.classList.toggle("empty-note", !p.note);
+  show("cardOverlay");
+}
+
+document.getElementById("cardClose").onclick = () => hide("cardOverlay");
+document.getElementById("cardEdit").onclick = () => { hide("cardOverlay"); openForm(currentId); };
+document.getElementById("cardDelete").onclick = () => {
+  if(confirm("Удалить этого человека с орбиты?")){
+    data.people = data.people.filter(p => p.id !== currentId);
+    persist();
+    syncOrbs();
+    renderPanel();
+    hide("cardOverlay");
+  }
+};
+
+let editId = null;
+let formColor = null;
+const swWrap = document.getElementById("fSwatches");
+const fColor = document.getElementById("fColor");
+
+function setSelected(el){
+  swWrap.querySelectorAll(".sw").forEach(b => b.classList.remove("selected"));
+  if(el) el.classList.add("selected");
+}
+
+swWrap.addEventListener("click", e => {
+  const b = e.target.closest(".sw");
+  if(!b || b.classList.contains("custom")) return;
+  formColor = b.dataset.c === "auto" ? null : b.dataset.c;
+  setSelected(b);
+});
+
+fColor.addEventListener("input", () => {
+  formColor = fColor.value;
+  setSelected(swWrap.querySelector(".custom"));
+});
+
+function refreshGroupList(){
+  document.getElementById("groupList").innerHTML =
+    Object.keys(data.groups).map(g => `<option value="${esc(g)}">`).join("");
+}
+
+function openForm(id){
+  editId = id || null;
+  refreshGroupList();
+  const p = id ? data.people.find(o => o.id === id) : null;
+  document.getElementById("formTitle").textContent = p ? "Изменить" : "Новый человек";
+  document.getElementById("fName").value = p ? p.name : "";
+  document.getElementById("fGroup").value = p ? p.group : "";
+  document.getElementById("fNote").value = p ? p.note : "";
+  formColor = p ? p.color : null;
+  if(!formColor){
+    setSelected(swWrap.querySelector('[data-c="auto"]'));
+  } else {
+    const preset = swWrap.querySelector(`[data-c="${formColor}"]`);
+    if(preset) setSelected(preset);
+    else { fColor.value = formColor; setSelected(swWrap.querySelector(".custom")); }
+  }
+  show("formOverlay");
+  setTimeout(() => document.getElementById("fName").focus(), 60);
+}
+
+document.getElementById("addBtn").onclick = () => openForm(null);
+document.getElementById("formCancel").onclick = () => hide("formOverlay");
+document.getElementById("formSave").onclick = () => {
+  const name = document.getElementById("fName").value.trim();
+  const group = document.getElementById("fGroup").value.trim() || "Без группы";
+  const note = document.getElementById("fNote").value.trim();
+  if(!name){ document.getElementById("fName").focus(); return; }
+  registerGroup(group);
+  if(editId){
+    const p = data.people.find(o => o.id === editId);
+    p.name = name;
+    p.group = group;
+    p.note = note;
+    p.color = formColor;
+  } else {
+    data.people.push(mk(name, group, note, 0.55 + Math.random() * 0.1, Math.random() * Math.PI * 2, formColor));
+  }
+  persist();
+  syncOrbs();
+  renderPanel();
+  hide("formOverlay");
+};
+
+function openSettings(){
+  document.getElementById("sLabel").value = data.sunLabel;
+  show("settingsOverlay");
+}
+
+document.getElementById("gearBtn").onclick = openSettings;
+document.getElementById("settingsCancel").onclick = () => hide("settingsOverlay");
+document.getElementById("settingsSave").onclick = () => {
+  data.sunLabel = document.getElementById("sLabel").value.trim() || "Я";
+  document.getElementById("sunLabel").textContent = data.sunLabel;
+  persist();
+  hide("settingsOverlay");
+};
+document.getElementById("resetBtn").onclick = () => {
+  if(confirm("Удалить всех людей и вернуть пример по умолчанию?")){
+    data = seed();
+    document.getElementById("sunLabel").textContent = data.sunLabel;
+    persist();
+    syncOrbs();
+    renderPanel();
+    hide("settingsOverlay");
+  }
+};
+
+const panel = document.getElementById("panel");
+document.getElementById("togglePanel").onclick = () => panel.classList.toggle("closed");
+
+/* ============================================================
+   СОХРАНЕНИЕ И СТАРТ
+   ============================================================ */
+let saveTimer = null;
+
+function persist(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveData(data), 250);
+}
+
+window.addEventListener("resize", layout);
+
+function init(){
+  buildScene();
+  makeStars();
+  const loaded = loadData();
+  data = loaded || seed();
+  if(!data.groups) data.groups = {};
+  if(!data.people) data.people = [];
+  document.getElementById("sunLabel").textContent = data.sunLabel || "Я";
+  syncOrbs();
+  renderPanel();
+  requestAnimationFrame(loop);
+  if(!loaded) persist();
+}
+
+init();
+</script>
+</body>
+</html>
