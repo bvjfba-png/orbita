@@ -171,6 +171,16 @@ body{
 .range-row input[type=range]{flex:1}
 .range-val{font-size:12px;color:var(--muted);min-width:36px;text-align:right}
 
+
+.zoom-ctrl{position:fixed;left:24px;bottom:78px;z-index:31;display:flex;align-items:center;gap:4px;
+  background:var(--panel);backdrop-filter:blur(18px);border:1px solid var(--border-strong);
+  border-radius:24px;padding:4px 6px}
+.zoom-ctrl button{width:34px;height:34px;border:none;border-radius:50%;background:rgba(255,255,255,.06);
+  color:var(--text);font-size:18px;line-height:1;cursor:pointer;font-family:inherit}
+.zoom-ctrl button:hover{background:rgba(255,255,255,.12)}
+.zoom-ctrl .zl{font-size:11.5px;color:var(--muted);min-width:42px;text-align:center;user-select:none}
+@media(max-width:640px){.zoom-ctrl{bottom:72px;left:18px}}
+
 @media(max-width:640px){
   #panel{width:100%;max-width:330px}
   .brand{top:18px;left:18px}
@@ -195,6 +205,11 @@ body{
 <button class="fab" id="togglePanel" title="Список" type="button">
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
 </button>
+<div class="zoom-ctrl" title="Масштаб: колёсико мыши или щипок">
+  <button type="button" id="zoomOut" aria-label="Уменьшить">−</button>
+  <span class="zl" id="zoomLabel">100%</span>
+  <button type="button" id="zoomIn" aria-label="Увеличить">+</button>
+</div>
 <button class="fab" id="gearBtn" title="Настройки" type="button">
   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
 </button>
@@ -361,6 +376,7 @@ function migrateData(d){
   if(!d.groups) d.groups = {};
   if(!d.people) d.people = [];
   if(!d.orbits || !d.orbits.length) d.orbits = defaultOrbits();
+  if(!d.view) d.view = { zoom: 1, panX: 0, panY: 0 };
   delete d.sunLabel;
   return d;
 }
@@ -429,6 +445,9 @@ const world = document.getElementById("world");
 const stars = document.getElementById("stars");
 let cx = 0, cy = 0, baseR = 0, maxR = 0;
 let panX = 0, panY = 0;
+let viewZoom = 1;
+const ZOOM_MIN = 0.28;
+const ZOOM_MAX = 2.4;
 const SUN_R = 30;
 const MIN_GAP = 24;
 const SPACE_SCALE = 3;
@@ -439,12 +458,45 @@ function layout(){
   cy = space.clientHeight / 2;
   baseR = Math.min(cx, cy) - 60;
   maxR = baseR * SPACE_SCALE;
-  applyPan();
+  applyViewTransform();
   syncRings();
 }
 
-function applyPan(){
-  world.style.transform = `translate(${panX}px, ${panY}px)`;
+function applyViewTransform(){
+  world.style.transformOrigin = cx + "px " + cy + "px";
+  world.style.transform = `translate(${panX}px, ${panY}px) scale(${viewZoom})`;
+  updateZoomLabel();
+}
+
+function updateZoomLabel(){
+  const el = document.getElementById("zoomLabel");
+  if(el) el.textContent = Math.round(viewZoom * 100) + "%";
+}
+
+let viewSaveTimer = null;
+function saveViewState(){
+  clearTimeout(viewSaveTimer);
+  viewSaveTimer = setTimeout(() => {
+    data.view = { zoom: viewZoom, panX, panY };
+    persist();
+  }, 280);
+}
+
+function setZoom(newZoom, anchorX, anchorY){
+  const z0 = viewZoom;
+  const z1 = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newZoom));
+  const mx = anchorX ?? cx;
+  const my = anchorY ?? cy;
+  const ox = (mx - cx - panX) / z0;
+  const oy = (my - cy - panY) / z0;
+  viewZoom = z1;
+  panX = mx - cx - ox * z1;
+  panY = my - cy - oy * z1;
+  applyViewTransform();
+}
+
+function zoomBy(factor, anchorX, anchorY){
+  setZoom(viewZoom * factor, anchorX, anchorY);
 }
 
 function worldPos(angle, dist){
@@ -453,8 +505,8 @@ function worldPos(angle, dist){
 }
 
 function pointerToPolar(clientX, clientY){
-  const dx = clientX - cx - panX;
-  const dy = clientY - cy - panY;
+  const dx = (clientX - cx - panX) / viewZoom;
+  const dy = (clientY - cy - panY) / viewZoom;
   const ang = Math.atan2(dy, dx);
   let r = Math.max(SUN_R + MIN_GAP, Math.min(maxR, Math.hypot(dx, dy)));
   return { ang, r, dist: distOf(r) };
@@ -493,7 +545,7 @@ function buildScene(){
   sun.id = "sun";
   sun.addEventListener("click", openSettings);
   world.appendChild(sun);
-  setupPan();
+  setupNavigation();
   layout();
 }
 
@@ -527,31 +579,71 @@ function syncRings(){
   }
 }
 
-function setupPan(){
-  let sx, sy, active = false;
+function setupNavigation(){
+  const pointers = new Map();
+  let sx = 0, sy = 0, panActive = false;
+  let pinchDist = 0, pinchZoom = 1;
+
+  document.getElementById("zoomIn").onclick = () => { zoomBy(1.18, cx, cy); saveViewState(); };
+  document.getElementById("zoomOut").onclick = () => { zoomBy(1 / 1.18, cx, cy); saveViewState(); };
+
+  space.addEventListener("wheel", e => {
+    if(e.target.closest("#panel") || e.target.closest(".overlay")) return;
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+    zoomBy(factor, e.clientX, e.clientY);
+    saveViewState();
+  }, { passive: false });
+
   space.addEventListener("pointerdown", e => {
     if(e.target.closest(".orb") || e.target.closest("#sun")) return;
-    active = true;
-    sx = e.clientX - panX;
-    sy = e.clientY - panY;
-    space.setPointerCapture(e.pointerId);
-    space.classList.add("panning");
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if(pointers.size === 1){
+      panActive = true;
+      sx = e.clientX - panX;
+      sy = e.clientY - panY;
+      space.setPointerCapture(e.pointerId);
+      space.classList.add("panning");
+    } else if(pointers.size === 2){
+      panActive = false;
+      space.classList.remove("panning");
+      const pts = [...pointers.values()];
+      pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      pinchZoom = viewZoom;
+    }
   });
+
   space.addEventListener("pointermove", e => {
-    if(!active) return;
-    panX = e.clientX - sx;
-    panY = e.clientY - sy;
-    applyPan();
-    syncRings();
+    if(!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if(pointers.size === 2 && pinchDist > 10){
+      panActive = false;
+      const pts = [...pointers.values()];
+      const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const midX = (pts[0].x + pts[1].x) / 2;
+      const midY = (pts[0].y + pts[1].y) / 2;
+      setZoom(pinchZoom * (d / pinchDist), midX, midY);
+      return;
+    }
+    if(panActive && pointers.size === 1){
+      panX = e.clientX - sx;
+      panY = e.clientY - sy;
+      applyViewTransform();
+    }
   });
-  const endPan = e => {
-    if(!active) return;
-    active = false;
-    space.classList.remove("panning");
-    try{ space.releasePointerCapture(e.pointerId); }catch(_){}
+
+  const endPointer = e => {
+    pointers.delete(e.pointerId);
+    if(pointers.size < 2) pinchDist = 0;
+    if(pointers.size === 0){
+      panActive = false;
+      space.classList.remove("panning");
+      try{ space.releasePointerCapture(e.pointerId); }catch(_){}
+      saveViewState();
+    }
   };
-  space.addEventListener("pointerup", endPan);
-  space.addEventListener("pointercancel", endPan);
+  space.addEventListener("pointerup", endPointer);
+  space.addEventListener("pointercancel", endPointer);
 }
 
 /* ============================================================
@@ -918,6 +1010,11 @@ function init(){
   makeStars();
   const loaded = loadData();
   data = migrateData(loaded || seed());
+  if(data.view){
+    viewZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, data.view.zoom ?? 1));
+    panX = data.view.panX ?? 0;
+    panY = data.view.panY ?? 0;
+  }
   syncRings();
   syncOrbs();
   renderPanel();
